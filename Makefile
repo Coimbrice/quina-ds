@@ -20,7 +20,8 @@ build/words.c: tools/wordlist.py data/answers.txt data/allowed.txt
 
 .PHONY: test
 
-test:
-	@$(MKDIR) -p build
+test: build/words.c
 	$(V)$(HOSTCC) $(HOSTCFLAGS) -o build/test_game tests/test_game.c source/game.c
+	$(V)$(HOSTCC) $(HOSTCFLAGS) -o build/test_words tests/test_words.c source/words.c build/words.c
 	$(V)build/test_game
+	$(V)build/test_words
