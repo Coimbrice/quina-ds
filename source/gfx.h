@@ -30,6 +30,10 @@ void gfx_clear(enum screen s, enum color color);
 void gfx_rect(enum screen s, int x, int y, int w, int h, enum color color);
 void gfx_frame(enum screen s, int x, int y, int w, int h, int thickness, enum color color);
 
+// Draws pixel art given as rows of '#' and '.'.
+void gfx_art(enum screen s, int x, int y, const char *const *rows, int count, int scale,
+             enum color color);
+
 // Draws a Latin-1 character in uppercase. y is the top of the letter body;
 // accents go above it.
 void gfx_char(enum screen s, int x, int y, int c, int scale, enum color color);

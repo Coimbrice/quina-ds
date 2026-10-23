@@ -94,7 +94,11 @@ static void press(char c)
         submit();
     else if (c == KB_ERASE)
         erase();
-    else
+    else if (c == KB_LEFT && cursor > 0)
+        cursor--;
+    else if (c == KB_RIGHT && cursor < WORD_LEN - 1)
+        cursor++;
+    else if (c >= 'a' && c <= 'z')
         type_letter(c);
 }
 

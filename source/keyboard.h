@@ -3,6 +3,8 @@
 
 #include "game.h"
 
+#define KB_LEFT '\1'
+#define KB_RIGHT '\2'
 #define KB_ERASE '\b'
 #define KB_ENTER '\n'
 
@@ -13,10 +15,10 @@ void keyboard_draw(const struct game *g, int focused);
 
 // Returns the key under a point, or -1.
 int keyboard_hit(int x, int y);
-// Returns the key next to k in a direction. Moving up and down keeps the
-// column the player was on, even when passing through the wide ENTER key.
+// Returns the key next to k in a direction. Moving up and down goes to the
+// key closest to where the player last moved sideways.
 int keyboard_move(int k, int dx, int dy);
-// Letter of a key, or KB_ERASE or KB_ENTER.
+// Letter of a key, or one of the KB_ codes above.
 char keyboard_char(int k);
 
 #endif

@@ -98,11 +98,11 @@ void gfx_frame(enum screen s, int x, int y, int w, int h, int thickness, enum co
     fill(s, x + w - 1 - t, y + h - 1 - t, t, t, color);
 }
 
-static void draw_rows(enum screen s, int x, int y, const char *const *rows, int count, int scale,
-                      enum color color)
+void gfx_art(enum screen s, int x, int y, const char *const *rows, int count, int scale,
+             enum color color)
 {
     for (int row = 0; row < count; row++) {
-        for (int col = 0; col < GLYPH_W; col++) {
+        for (int col = 0; rows[row][col]; col++) {
             if (rows[row][col] == '#')
                 fill(s, x + col * scale, y + row * scale, scale, scale, color);
         }
@@ -118,11 +118,11 @@ void gfx_char(enum screen s, int x, int y, int c, int scale, enum color color)
     if (!glyph)
         return;
 
-    draw_rows(s, x, y, glyph, GLYPH_H, scale, color);
+    gfx_art(s, x, y, glyph, GLYPH_H, scale, color);
     if (mark && below)
-        draw_rows(s, x, y + GLYPH_H * scale, mark, MARK_H, scale, color);
+        gfx_art(s, x, y + GLYPH_H * scale, mark, MARK_H, scale, color);
     else if (mark)
-        draw_rows(s, x, y - (MARK_H + 1) * scale, mark, MARK_H, scale, color);
+        gfx_art(s, x, y - (MARK_H + 1) * scale, mark, MARK_H, scale, color);
 }
 
 // Reads one character from UTF-8 text, returning it as Latin-1.

@@ -7,9 +7,6 @@
 #define GLYPH_H 7
 #define MARK_H 2
 
-// Not a Latin-1 character, used for the erase key.
-#define FONT_ERASE 0x08
-
 enum mark {
     MARK_NONE,
     MARK_ACUTE,
