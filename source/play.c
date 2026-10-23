@@ -14,7 +14,7 @@
 #define PROMPT_GAP 4
 #define PROMPT_X ((SCREEN_W - WORD_LEN * PROMPT_TILE - (WORD_LEN - 1) * PROMPT_GAP) / 2)
 #define PROMPT_Y 6
-#define MESSAGE_Y 46
+#define MESSAGE_Y 55
 #define MESSAGE_FRAMES 150
 
 static struct game game;
@@ -164,8 +164,8 @@ static void draw_prompt(void)
     for (int i = 0; i < WORD_LEN; i++) {
         int x = PROMPT_X + i * (PROMPT_TILE + PROMPT_GAP);
         bool selected = i == cursor;
-        draw_tile(BOTTOM, x, PROMPT_Y, PROMPT_TILE, PROMPT_TILE, 2, typed[i], COLOR_BG, true,
-                  selected);
+        draw_tile(BOTTOM, x, PROMPT_Y, PROMPT_TILE, PROMPT_TILE, FONT_LARGE, typed[i], COLOR_BG,
+                  true, selected);
         if (selected && !focus_keys)
             gfx_frame(BOTTOM, x, PROMPT_Y, PROMPT_TILE, PROMPT_TILE, 2, COLOR_TEXT);
     }
@@ -174,7 +174,7 @@ static void draw_prompt(void)
 static void draw_result(void)
 {
     if (game_won(&game)) {
-        gfx_text(BOTTOM, SCREEN_W / 2, PROMPT_Y + 10, "Parabéns!", 2, COLOR_TEXT);
+        gfx_text(BOTTOM, SCREEN_W / 2, PROMPT_Y + 22, "Parabéns!", FONT_LARGE, COLOR_TEXT);
     } else {
         char word[WORD_LEN];
         char text[WORD_LEN * 2 + 1];
@@ -193,10 +193,10 @@ static void draw_result(void)
         }
         *p = 0;
 
-        gfx_text(BOTTOM, SCREEN_W / 2, PROMPT_Y + 2, "A palavra era", 1, COLOR_DIM_TEXT);
-        gfx_text(BOTTOM, SCREEN_W / 2, PROMPT_Y + 18, text, 2, COLOR_TEXT);
+        gfx_text(BOTTOM, SCREEN_W / 2, PROMPT_Y + 8, "A palavra era", FONT_SMALL, COLOR_DIM_TEXT);
+        gfx_text(BOTTOM, SCREEN_W / 2, PROMPT_Y + 28, text, FONT_LARGE, COLOR_TEXT);
     }
-    gfx_text(BOTTOM, SCREEN_W / 2, MESSAGE_Y, "A: jogar de novo", 1, COLOR_DIM_TEXT);
+    gfx_text(BOTTOM, SCREEN_W / 2, MESSAGE_Y, "A: jogar de novo", FONT_MEDIUM, COLOR_DIM_TEXT);
 }
 
 static void draw(void)
@@ -211,7 +211,7 @@ static void draw(void)
     else
         draw_prompt();
     if (message)
-        gfx_text(BOTTOM, SCREEN_W / 2, MESSAGE_Y, message, 1, COLOR_TEXT);
+        gfx_text(BOTTOM, SCREEN_W / 2, MESSAGE_Y, message, FONT_MEDIUM, COLOR_TEXT);
     keyboard_draw(&game, focus_keys && !over ? focused_key : -1);
 }
 

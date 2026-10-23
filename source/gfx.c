@@ -9,7 +9,7 @@
 #define RGB(hex) RGB15(((hex) >> 19) & 31, ((hex) >> 11) & 31, ((hex) >> 3) & 31)
 
 // clang-format off
-static const uint16_t palette[] = {
+static const uint16_t palette[COLOR_COUNT] = {
     [COLOR_BG] = RGB(0x6e5c62),
     [COLOR_EMPTY] = RGB(0x615458),
     [COLOR_BORDER] = RGB(0x4c4347),
@@ -26,6 +26,12 @@ static const uint16_t palette[] = {
 static uint8_t buffers[2][SCREEN_W * SCREEN_H] ALIGN(32);
 static int bg_ids[2];
 
+// Antialiased text needs colors between the text and whatever is under it.
+// They're added to the palette the first time each pair is drawn.
+static uint16_t colors[256];
+static int color_count;
+static uint8_t shades[COLOR_COUNT][256][2];
+
 void gfx_init(void)
 {
     videoSetMode(MODE_5_2D);
@@ -36,10 +42,12 @@ void gfx_init(void)
     bg_ids[TOP] = bgInit(3, BgType_Bmp8, BgSize_B8_256x256, 0, 0);
     bg_ids[BOTTOM] = bgInitSub(3, BgType_Bmp8, BgSize_B8_256x256, 0, 0);
 
-    for (unsigned i = 0; i < sizeof(palette) / sizeof(palette[0]); i++) {
+    for (int i = 0; i < COLOR_COUNT; i++) {
+        colors[i] = palette[i];
         BG_PALETTE[i] = palette[i];
         BG_PALETTE_SUB[i] = palette[i];
     }
+    color_count = COLOR_COUNT;
 }
 
 void gfx_present(void)
@@ -109,20 +117,64 @@ void gfx_art(enum screen s, int x, int y, const char *const *rows, int count, in
     }
 }
 
-void gfx_char(enum screen s, int x, int y, int c, int scale, enum color color)
+static int shade(enum color fg, int bg, int level)
 {
-    const char *const *mark;
-    bool below;
-    const char *const *glyph = font_glyph(c, &mark, &below);
+    if (level == 3)
+        return fg;
+    if (!shades[fg][bg][level - 1]) {
+        if (color_count == 256)
+            return level == 2 ? fg : bg;
 
-    if (!glyph)
-        return;
+        int a = colors[fg];
+        int b = colors[bg];
+        int mixed = 0;
+        for (int shift = 0; shift < 15; shift += 5) {
+            int ca = (a >> shift) & 31;
+            int cb = (b >> shift) & 31;
+            mixed |= ((ca * level + cb * (3 - level)) / 3) << shift;
+        }
 
-    gfx_art(s, x, y, glyph, GLYPH_H, scale, color);
-    if (mark && below)
-        gfx_art(s, x, y + GLYPH_H * scale, mark, MARK_H, scale, color);
-    else if (mark)
-        gfx_art(s, x, y - (MARK_H + 1) * scale, mark, MARK_H, scale, color);
+        colors[color_count] = mixed;
+        BG_PALETTE[color_count] = mixed;
+        BG_PALETTE_SUB[color_count] = mixed;
+        shades[fg][bg][level - 1] = color_count++;
+    }
+    return shades[fg][bg][level - 1];
+}
+
+// Draws a glyph with the pen at (x, y) on the baseline.
+static void draw_glyph(enum screen s, int x, int y, const struct font *font, int c,
+                       enum color color)
+{
+    const struct glyph *g = &font->glyphs[c];
+    const uint8_t *pixels = &font->pixels[g->offset];
+
+    for (int row = 0; row < g->h; row++) {
+        int py = y + g->y + row;
+        for (int col = 0; col < g->w; col++) {
+            int px = x + g->x + col;
+            int i = row * g->w + col;
+            int level = (pixels[i / 4] >> (i % 4 * 2)) & 3;
+            if (level && px >= 0 && px < SCREEN_W && py >= 0 && py < SCREEN_H) {
+                uint8_t *p = &buffers[s][py * SCREEN_W + px];
+                *p = shade(color, *p, level);
+            }
+        }
+    }
+}
+
+void gfx_letter(enum screen s, int x, int y, int c, enum font_size size, enum color color)
+{
+    const struct font *font = &fonts[size];
+
+    if (c >= 'a' && c <= 'z')
+        c -= 'a' - 'A';
+    // Latin-1 lowercase accented letters are 0x20 above their uppercase.
+    if (c >= 0xE0 && c != 0xF7 && c != 0xFF)
+        c -= 0x20;
+
+    const struct glyph *g = &font->glyphs[c];
+    draw_glyph(s, x - g->x - g->w / 2, y + font->cap_height / 2, font, c, color);
 }
 
 // Reads one character from UTF-8 text, returning it as Latin-1.
@@ -142,17 +194,18 @@ static int next_char(const char **text)
     return c;
 }
 
-void gfx_text(enum screen s, int x, int y, const char *text, int scale, enum color color)
+void gfx_text(enum screen s, int x, int y, const char *text, enum font_size size, enum color color)
 {
-    int advance = (GLYPH_W + 1) * scale;
-    int length = 0;
+    const struct font *font = &fonts[size];
+    int width = 0;
 
-    for (const char *p = text; *p; length++)
-        next_char(&p);
+    for (const char *p = text; *p;)
+        width += font->glyphs[next_char(&p)].advance;
 
-    x -= (length * advance - scale) / 2;
+    x -= width / 2;
     while (*text) {
-        gfx_char(s, x, y, next_char(&text), scale, color);
-        x += advance;
+        int c = next_char(&text);
+        draw_glyph(s, x, y, font, c, color);
+        x += font->glyphs[c].advance;
     }
 }

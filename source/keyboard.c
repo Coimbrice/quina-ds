@@ -1,7 +1,6 @@
 #include <stdlib.h>
 
 #include "board.h"
-#include "font.h"
 #include "gfx.h"
 #include "keyboard.h"
 
@@ -105,7 +104,8 @@ static void draw_key(const struct game *g, int k, bool focused)
 
     switch (key->c) {
     case KB_ENTER:
-        gfx_text(BOTTOM, key->x + key->w / 2, y + (KEY_H - GLYPH_H) / 2, "ENTER", 1, text);
+        gfx_text(BOTTOM, key->x + key->w / 2, y + (KEY_H + fonts[FONT_SMALL].cap_height) / 2,
+                 "ENTER", FONT_SMALL, text);
         break;
     case KB_ERASE:
         draw_icon(k, erase_icon, 9, 1, text);
@@ -117,8 +117,7 @@ static void draw_key(const struct game *g, int k, bool focused)
         draw_icon(k, right_icon, 9, 2, text);
         break;
     default:
-        gfx_char(BOTTOM, key->x + (key->w - GLYPH_W * 2) / 2, y + (KEY_H - GLYPH_H * 2) / 2, key->c,
-                 2, text);
+        gfx_letter(BOTTOM, key->x + key->w / 2, y + KEY_H / 2, key->c, FONT_MEDIUM, text);
     }
 }
 

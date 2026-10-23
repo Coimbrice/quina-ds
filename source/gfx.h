@@ -1,6 +1,8 @@
 #ifndef GFX_H
 #define GFX_H
 
+#include "font.h"
+
 #define SCREEN_W 256
 #define SCREEN_H 192
 
@@ -19,6 +21,7 @@ enum color {
     COLOR_KEY,
     COLOR_TEXT,
     COLOR_DIM_TEXT,
+    COLOR_COUNT,
 };
 
 void gfx_init(void);
@@ -34,10 +37,10 @@ void gfx_frame(enum screen s, int x, int y, int w, int h, int thickness, enum co
 void gfx_art(enum screen s, int x, int y, const char *const *rows, int count, int scale,
              enum color color);
 
-// Draws a Latin-1 character in uppercase. y is the top of the letter body;
-// accents go above it.
-void gfx_char(enum screen s, int x, int y, int c, int scale, enum color color);
-// Draws UTF-8 text in uppercase, centered on x.
-void gfx_text(enum screen s, int x, int y, const char *text, int scale, enum color color);
+// Draws a Latin-1 letter in uppercase, centered on (x, y) by its capital
+// height, so accents stick out above.
+void gfx_letter(enum screen s, int x, int y, int c, enum font_size size, enum color color);
+// Draws UTF-8 text centered on x, with its baseline at y.
+void gfx_text(enum screen s, int x, int y, const char *text, enum font_size size, enum color color);
 
 #endif

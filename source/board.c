@@ -1,10 +1,9 @@
 #include "board.h"
-#include "font.h"
 #include "words.h"
 
 #define TILE 28
 #define TILE_GAP 3
-#define TILE_SCALE 2
+#define TILE_FONT FONT_LARGE
 
 enum color hint_color(enum hint hint)
 {
@@ -20,8 +19,8 @@ enum color hint_color(enum hint hint)
     }
 }
 
-void draw_tile(enum screen s, int x, int y, int w, int h, int scale, int c, enum color fill,
-               bool outlined, bool cursor)
+void draw_tile(enum screen s, int x, int y, int w, int h, enum font_size size, int c,
+               enum color fill, bool outlined, bool cursor)
 {
     if (outlined) {
         gfx_frame(s, x, y, w, h, 2, COLOR_BORDER);
@@ -32,8 +31,7 @@ void draw_tile(enum screen s, int x, int y, int w, int h, int scale, int c, enum
     }
 
     if (c)
-        gfx_char(s, x + (w - GLYPH_W * scale) / 2, y + (h - GLYPH_H * scale) / 2, c, scale,
-                 COLOR_TEXT);
+        gfx_letter(s, x + w / 2, y + h / 2, c, size, COLOR_TEXT);
 }
 
 static void draw_row(const struct game *g, int board, int row, int x, int y,
@@ -51,12 +49,12 @@ static void draw_row(const struct game *g, int board, int row, int x, int y,
     for (int i = 0; i < WORD_LEN; i++) {
         int tx = x + i * (TILE + TILE_GAP);
         if (row < game_rows(g, board))
-            draw_tile(TOP, tx, y, TILE, TILE, TILE_SCALE, (unsigned char)text[i],
+            draw_tile(TOP, tx, y, TILE, TILE, TILE_FONT, (unsigned char)text[i],
                       hint_color(hints[i]), false, false);
         else if (typing)
-            draw_tile(TOP, tx, y, TILE, TILE, TILE_SCALE, typed[i], COLOR_BG, true, i == cursor);
+            draw_tile(TOP, tx, y, TILE, TILE, TILE_FONT, typed[i], COLOR_BG, true, i == cursor);
         else
-            draw_tile(TOP, tx, y, TILE, TILE, TILE_SCALE, 0, COLOR_EMPTY, false, false);
+            draw_tile(TOP, tx, y, TILE, TILE, TILE_FONT, 0, COLOR_EMPTY, false, false);
     }
 }
 
