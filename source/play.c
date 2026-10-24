@@ -171,30 +171,42 @@ static void draw_prompt(void)
     }
 }
 
+// Writes the answers as UTF-8, separated by spaces. Display forms are
+// Latin-1 but the text functions take UTF-8.
+static void answers_text(char *out)
+{
+    char word[WORD_LEN];
+
+    for (int b = 0; b < game.num_boards; b++) {
+        if (b > 0)
+            *out++ = ' ';
+        word_display(word_find(game.answers[b]), word);
+        for (int i = 0; i < WORD_LEN; i++) {
+            unsigned char c = word[i];
+            if (c >= 0x80) {
+                *out++ = 0xC0 | (c >> 6);
+                *out++ = 0x80 | (c & 0x3F);
+            } else {
+                *out++ = c;
+            }
+        }
+    }
+    *out = 0;
+}
+
 static void draw_result(void)
 {
     if (game_won(&game)) {
         gfx_text(BOTTOM, SCREEN_W / 2, PROMPT_Y + 22, "Parabéns!", FONT_LARGE, COLOR_TEXT);
     } else {
-        char word[WORD_LEN];
-        char text[WORD_LEN * 2 + 1];
-        char *p = text;
+        char text[MAX_BOARDS * (WORD_LEN * 2 + 1)];
+        bool one = game.num_boards == 1;
 
-        // Display forms are Latin-1, the text functions take UTF-8.
-        word_display(word_find(game.answers[0]), word);
-        for (int i = 0; i < WORD_LEN; i++) {
-            unsigned char c = word[i];
-            if (c >= 0x80) {
-                *p++ = 0xC0 | (c >> 6);
-                *p++ = 0x80 | (c & 0x3F);
-            } else {
-                *p++ = c;
-            }
-        }
-        *p = 0;
-
-        gfx_text(BOTTOM, SCREEN_W / 2, PROMPT_Y + 8, "A palavra era", FONT_SMALL, COLOR_DIM_TEXT);
-        gfx_text(BOTTOM, SCREEN_W / 2, PROMPT_Y + 28, text, FONT_LARGE, COLOR_TEXT);
+        answers_text(text);
+        gfx_text(BOTTOM, SCREEN_W / 2, PROMPT_Y + 8, one ? "A palavra era" : "As palavras eram",
+                 FONT_SMALL, COLOR_DIM_TEXT);
+        gfx_text(BOTTOM, SCREEN_W / 2, PROMPT_Y + 28, text,
+                 game.num_boards == 4 ? FONT_MEDIUM : FONT_LARGE, COLOR_TEXT);
     }
     gfx_text(BOTTOM, SCREEN_W / 2, MESSAGE_Y, "A: jogar de novo", FONT_MEDIUM, COLOR_DIM_TEXT);
 }
@@ -219,6 +231,12 @@ void play_update(void)
 {
     uint32_t down = keysDown();
     uint32_t repeat = keysDownRepeat();
+
+    // Until there's a menu, SELECT cycles through the modes.
+    if (down & KEY_SELECT) {
+        play_start(game.num_boards == 4 ? 1 : game.num_boards * 2);
+        return;
+    }
 
     if (game_over(&game)) {
         if (down & (KEY_A | KEY_START | KEY_TOUCH))
