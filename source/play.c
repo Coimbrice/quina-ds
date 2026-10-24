@@ -303,8 +303,8 @@ static void draw_prompt(void)
     }
 }
 
-// Writes the answers as UTF-8, separated by spaces. Display forms are
-// Latin-1 but the text functions take UTF-8.
+// Writes the answers in uppercase UTF-8, separated by spaces. Display forms
+// are lowercase Latin-1, where uppercase letters are 0x20 below.
 static void answers_text(char *out)
 {
     char word[WORD_LEN];
@@ -315,6 +315,8 @@ static void answers_text(char *out)
         word_display(word_find(cur->game.answers[b]), word);
         for (int i = 0; i < WORD_LEN; i++) {
             unsigned char c = word[i];
+            if ((c >= 'a' && c <= 'z') || (c >= 0xE0 && c != 0xF7))
+                c -= 0x20;
             if (c >= 0x80) {
                 *out++ = 0xC0 | (c >> 6);
                 *out++ = 0x80 | (c & 0x3F);
