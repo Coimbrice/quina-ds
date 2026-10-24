@@ -86,19 +86,46 @@ static void draw_icon(int k, const char *const *icon, int count, int scale, enum
             color);
 }
 
+// With several boards each key is split into one part per board: halves
+// for two, quadrants for four.
+static void draw_key_fill(const struct game *g, const struct key *key, int y)
+{
+    int cols = g->num_boards == 1 ? 1 : 2;
+    int rows = g->num_boards == 4 ? 2 : 1;
+    int part_w = key->w / cols;
+    int part_h = KEY_H / rows;
+
+    for (int b = 0; b < g->num_boards; b++) {
+        enum hint hint = game_key_hint(g, b, key->c);
+        int px = key->x + (b % cols) * part_w;
+        int py = y + (b / cols) * part_h;
+
+        gfx_clip(px, py, b % cols == cols - 1 ? key->x + key->w - px : part_w,
+                 b / cols == rows - 1 ? y + KEY_H - py : part_h);
+        gfx_rect(BOTTOM, key->x, y, key->w, KEY_H,
+                 hint == HINT_NONE ? COLOR_KEY : hint_color(hint));
+    }
+    gfx_unclip();
+}
+
 static void draw_key(const struct game *g, int k, bool focused)
 {
     struct key *key = &keys[k];
     int y = KEY_Y + key->row * KEY_STEP_Y;
-    enum hint hint = HINT_NONE;
+    enum color text = COLOR_TEXT;
 
-    if (key->c >= 'a' && key->c <= 'z')
-        hint = game_key_hint(g, 0, key->c);
+    if (key->c >= 'a' && key->c <= 'z') {
+        draw_key_fill(g, key, y);
 
-    enum color fill = hint == HINT_NONE ? COLOR_KEY : hint_color(hint);
-    enum color text = hint == HINT_ABSENT ? COLOR_DIM_TEXT : COLOR_TEXT;
+        bool absent = true;
+        for (int b = 0; b < g->num_boards; b++)
+            absent &= game_key_hint(g, b, key->c) == HINT_ABSENT;
+        if (absent)
+            text = COLOR_DIM_TEXT;
+    } else {
+        gfx_rect(BOTTOM, key->x, y, key->w, KEY_H, COLOR_KEY);
+    }
 
-    gfx_rect(BOTTOM, key->x, y, key->w, KEY_H, fill);
     if (focused)
         gfx_frame(BOTTOM, key->x, y, key->w, KEY_H, 2, COLOR_TEXT);
 

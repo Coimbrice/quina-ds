@@ -62,20 +62,36 @@ void gfx_clear(enum screen s, enum color color)
     memset(buffers[s], color, sizeof(buffers[s]));
 }
 
+static int clip_x0, clip_y0;
+static int clip_x1 = SCREEN_W, clip_y1 = SCREEN_H;
+
+void gfx_clip(int x, int y, int w, int h)
+{
+    clip_x0 = x;
+    clip_y0 = y;
+    clip_x1 = x + w;
+    clip_y1 = y + h;
+}
+
+void gfx_unclip(void)
+{
+    gfx_clip(0, 0, SCREEN_W, SCREEN_H);
+}
+
 static void fill(enum screen s, int x, int y, int w, int h, enum color color)
 {
-    if (x < 0) {
-        w += x;
-        x = 0;
+    if (x < clip_x0) {
+        w -= clip_x0 - x;
+        x = clip_x0;
     }
-    if (y < 0) {
-        h += y;
-        y = 0;
+    if (y < clip_y0) {
+        h -= clip_y0 - y;
+        y = clip_y0;
     }
-    if (x + w > SCREEN_W)
-        w = SCREEN_W - x;
-    if (y + h > SCREEN_H)
-        h = SCREEN_H - y;
+    if (x + w > clip_x1)
+        w = clip_x1 - x;
+    if (y + h > clip_y1)
+        h = clip_y1 - y;
     if (w <= 0 || h <= 0)
         return;
 
@@ -155,7 +171,7 @@ static void draw_glyph(enum screen s, int x, int y, const struct font *font, int
             int px = x + g->x + col;
             int i = row * g->w + col;
             int level = (pixels[i / 4] >> (i % 4 * 2)) & 3;
-            if (level && px >= 0 && px < SCREEN_W && py >= 0 && py < SCREEN_H) {
+            if (level && px >= clip_x0 && px < clip_x1 && py >= clip_y0 && py < clip_y1) {
                 uint8_t *p = &buffers[s][py * SCREEN_W + px];
                 *p = shade(color, *p, level);
             }

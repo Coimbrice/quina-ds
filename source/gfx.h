@@ -29,6 +29,10 @@ void gfx_init(void);
 void gfx_present(void);
 
 void gfx_clear(enum screen s, enum color color);
+// Limits drawing to a rectangle until gfx_unclip is called.
+void gfx_clip(int x, int y, int w, int h);
+void gfx_unclip(void);
+
 // Rectangles have slightly rounded corners.
 void gfx_rect(enum screen s, int x, int y, int w, int h, enum color color);
 void gfx_frame(enum screen s, int x, int y, int w, int h, int thickness, enum color color);
