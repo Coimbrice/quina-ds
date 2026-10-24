@@ -1,6 +1,8 @@
 #ifndef GFX_H
 #define GFX_H
 
+#include <stdbool.h>
+
 #include "font.h"
 
 #define SCREEN_W 256
@@ -27,6 +29,9 @@ enum color {
 void gfx_init(void);
 // Copies what was drawn to the screens. Call it right after the vblank.
 void gfx_present(void);
+// Fades both screens to black, or back from black showing what was drawn.
+void gfx_fade_out(void);
+void gfx_fade_in(void);
 
 void gfx_clear(enum screen s, enum color color);
 // Limits drawing to a rectangle until gfx_unclip is called.
@@ -46,5 +51,10 @@ void gfx_art(enum screen s, int x, int y, const char *const *rows, int count, in
 void gfx_letter(enum screen s, int x, int y, int c, enum font_size size, enum color color);
 // Draws UTF-8 text centered on x, with its baseline at y.
 void gfx_text(enum screen s, int x, int y, const char *text, enum font_size size, enum color color);
+int gfx_text_width(const char *text, enum font_size size);
+
+// A key-colored box with a centered label, outlined when focused.
+void gfx_button(enum screen s, int x, int y, int w, int h, const char *text, enum font_size size,
+                bool focused);
 
 #endif

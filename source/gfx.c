@@ -57,6 +57,26 @@ void gfx_present(void)
     dmaCopyWords(3, buffers[BOTTOM], bgGetGfxPtr(bg_ids[BOTTOM]), sizeof(buffers[BOTTOM]));
 }
 
+#define FADE_FRAMES 10
+
+void gfx_fade_out(void)
+{
+    for (int i = 1; i <= FADE_FRAMES; i++) {
+        swiWaitForVBlank();
+        setBrightness(3, -16 * i / FADE_FRAMES);
+    }
+}
+
+void gfx_fade_in(void)
+{
+    swiWaitForVBlank();
+    gfx_present();
+    for (int i = FADE_FRAMES - 1; i >= 0; i--) {
+        swiWaitForVBlank();
+        setBrightness(3, -16 * i / FADE_FRAMES);
+    }
+}
+
 void gfx_clear(enum screen s, enum color color)
 {
     memset(buffers[s], color, sizeof(buffers[s]));
@@ -210,18 +230,32 @@ static int next_char(const char **text)
     return c;
 }
 
+int gfx_text_width(const char *text, enum font_size size)
+{
+    int width = 0;
+
+    while (*text)
+        width += fonts[size].glyphs[next_char(&text)].advance;
+    return width;
+}
+
 void gfx_text(enum screen s, int x, int y, const char *text, enum font_size size, enum color color)
 {
     const struct font *font = &fonts[size];
-    int width = 0;
 
-    for (const char *p = text; *p;)
-        width += font->glyphs[next_char(&p)].advance;
-
-    x -= width / 2;
+    x -= gfx_text_width(text, size) / 2;
     while (*text) {
         int c = next_char(&text);
         draw_glyph(s, x, y, font, c, color);
         x += font->glyphs[c].advance;
     }
+}
+
+void gfx_button(enum screen s, int x, int y, int w, int h, const char *text, enum font_size size,
+                bool focused)
+{
+    gfx_rect(s, x, y, w, h, COLOR_KEY);
+    if (focused)
+        gfx_frame(s, x, y, w, h, 2, COLOR_TEXT);
+    gfx_text(s, x + w / 2, y + (h + fonts[size].cap_height) / 2, text, size, COLOR_TEXT);
 }
