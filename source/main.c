@@ -20,7 +20,8 @@ int main(void)
         swiWaitForVBlank();
         gfx_present();
         scanKeys();
-        play_update();
+        if (play_update())
+            play_start(1);
     }
 
     return 0;

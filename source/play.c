@@ -10,12 +10,32 @@
 #include "play.h"
 #include "words.h"
 
-#define PROMPT_TILE 30
+#define HEADER_Y 3
+#define HEADER_H 18
+#define MENU_X 4
+#define MENU_W 52
+#define PROMPT_TILE 28
 #define PROMPT_GAP 4
 #define PROMPT_X ((SCREEN_W - WORD_LEN * PROMPT_TILE - (WORD_LEN - 1) * PROMPT_GAP) / 2)
-#define PROMPT_Y 6
-#define MESSAGE_Y 55
+#define PROMPT_Y 25
+#define MESSAGE_Y 66
 #define MESSAGE_FRAMES 150
+
+#define DIALOG_X 28
+#define DIALOG_Y 56
+#define DIALOG_W 200
+#define DIALOG_H 84
+#define CHOICE_W 76
+#define CHOICE_H 26
+#define CHOICE_Y (DIALOG_Y + 46)
+#define NO_X (DIALOG_X + 16)
+#define YES_X (DIALOG_X + DIALOG_W - 16 - CHOICE_W)
+
+static const char *const mode_names[MAX_BOARDS + 1] = {
+    [1] = "Quina",
+    [2] = "Duque",
+    [4] = "Quadra",
+};
 
 static struct game game;
 static char typed[WORD_LEN];
@@ -24,7 +44,11 @@ static bool focus_keys;
 static int focused_key;
 static const char *message;
 static int message_timer;
+static bool confirming;
+static bool confirm_yes;
 static bool dirty;
+
+static void draw(void);
 
 static void show_message(const char *text)
 {
@@ -52,7 +76,8 @@ void play_start(int num_boards)
     focus_keys = true;
     focused_key = 0;
     message = NULL;
-    dirty = true;
+    confirming = false;
+    draw();
 }
 
 static void type_letter(char c)
@@ -102,27 +127,23 @@ static void press(char c)
         type_letter(c);
 }
 
-static bool prompt_hit(int x, int y, int *box)
+static bool inside(int px, int py, int x, int y, int w, int h)
 {
-    if (y < PROMPT_Y || y >= PROMPT_Y + PROMPT_TILE || x < PROMPT_X)
-        return false;
-    *box = (x - PROMPT_X) / (PROMPT_TILE + PROMPT_GAP);
-    return *box < WORD_LEN;
+    return px >= x && px < x + w && py >= y && py < y + h;
 }
 
-static void handle_touch(void)
+static void handle_touch(int x, int y)
 {
-    touchPosition touch;
-    int box;
-
-    touchRead(&touch);
-    if (prompt_hit(touch.px, touch.py, &box)) {
-        cursor = box;
-        focus_keys = false;
+    if (inside(x, y, PROMPT_X, PROMPT_Y, SCREEN_W - 2 * PROMPT_X, PROMPT_TILE)) {
+        int box = (x - PROMPT_X) / (PROMPT_TILE + PROMPT_GAP);
+        if (box < WORD_LEN) {
+            cursor = box;
+            focus_keys = false;
+        }
         return;
     }
 
-    int k = keyboard_hit(touch.px, touch.py);
+    int k = keyboard_hit(x, y);
     if (k >= 0) {
         focus_keys = false;
         press(keyboard_char(k));
@@ -157,6 +178,37 @@ static void handle_buttons(uint32_t down)
         if (down & (KEY_UP | KEY_DOWN))
             focus_keys = true;
     }
+}
+
+// Returns true when the player confirms going back to the menu.
+static bool handle_confirm(uint32_t down, int x, int y)
+{
+    if (down & KEY_TOUCH) {
+        if (inside(x, y, YES_X, CHOICE_Y, CHOICE_W, CHOICE_H))
+            return true;
+        if (inside(x, y, NO_X, CHOICE_Y, CHOICE_W, CHOICE_H))
+            confirming = false;
+    }
+    if (down & (KEY_LEFT | KEY_RIGHT))
+        confirm_yes = !confirm_yes;
+    if (down & KEY_A) {
+        if (confirm_yes)
+            return true;
+        confirming = false;
+    }
+    if (down & (KEY_B | KEY_START))
+        confirming = false;
+    return false;
+}
+
+static void draw_header(void)
+{
+    const char *name = mode_names[game.num_boards];
+
+    gfx_button(BOTTOM, MENU_X, HEADER_Y, MENU_W, HEADER_H, "Menu", FONT_SMALL, false);
+    gfx_text(BOTTOM, SCREEN_W - 6 - gfx_text_width(name, FONT_MEDIUM) / 2,
+             HEADER_Y + (HEADER_H + fonts[FONT_MEDIUM].cap_height) / 2, name, FONT_MEDIUM,
+             COLOR_TEXT);
 }
 
 static void draw_prompt(void)
@@ -197,18 +249,27 @@ static void answers_text(char *out)
 static void draw_result(void)
 {
     if (game_won(&game)) {
-        gfx_text(BOTTOM, SCREEN_W / 2, PROMPT_Y + 22, "Parabéns!", FONT_LARGE, COLOR_TEXT);
+        gfx_text(BOTTOM, SCREEN_W / 2, PROMPT_Y + 21, "Parabéns!", FONT_LARGE, COLOR_TEXT);
     } else {
         char text[MAX_BOARDS * (WORD_LEN * 2 + 1)];
         bool one = game.num_boards == 1;
 
         answers_text(text);
-        gfx_text(BOTTOM, SCREEN_W / 2, PROMPT_Y + 8, one ? "A palavra era" : "As palavras eram",
+        gfx_text(BOTTOM, SCREEN_W / 2, PROMPT_Y + 6, one ? "A palavra era" : "As palavras eram",
                  FONT_SMALL, COLOR_DIM_TEXT);
-        gfx_text(BOTTOM, SCREEN_W / 2, PROMPT_Y + 28, text,
+        gfx_text(BOTTOM, SCREEN_W / 2, PROMPT_Y + 26, text,
                  game.num_boards == 4 ? FONT_MEDIUM : FONT_LARGE, COLOR_TEXT);
     }
     gfx_text(BOTTOM, SCREEN_W / 2, MESSAGE_Y, "A: jogar de novo", FONT_MEDIUM, COLOR_DIM_TEXT);
+}
+
+static void draw_confirm(void)
+{
+    gfx_rect(BOTTOM, DIALOG_X - 2, DIALOG_Y - 2, DIALOG_W + 4, DIALOG_H + 4, COLOR_BG);
+    gfx_rect(BOTTOM, DIALOG_X, DIALOG_Y, DIALOG_W, DIALOG_H, COLOR_ABSENT);
+    gfx_text(BOTTOM, SCREEN_W / 2, DIALOG_Y + 28, "Voltar ao menu?", FONT_MEDIUM, COLOR_TEXT);
+    gfx_button(BOTTOM, NO_X, CHOICE_Y, CHOICE_W, CHOICE_H, "Não", FONT_MEDIUM, !confirm_yes);
+    gfx_button(BOTTOM, YES_X, CHOICE_Y, CHOICE_W, CHOICE_H, "Sim", FONT_MEDIUM, confirm_yes);
 }
 
 static void draw(void)
@@ -218,31 +279,44 @@ static void draw(void)
     board_draw(&game, typed, cursor);
 
     gfx_clear(BOTTOM, COLOR_BG);
+    draw_header();
     if (over)
         draw_result();
     else
         draw_prompt();
     if (message)
         gfx_text(BOTTOM, SCREEN_W / 2, MESSAGE_Y, message, FONT_MEDIUM, COLOR_TEXT);
-    keyboard_draw(&game, focus_keys && !over ? focused_key : -1);
+    keyboard_draw(&game, focus_keys && !over && !confirming ? focused_key : -1);
+    if (confirming)
+        draw_confirm();
 }
 
-void play_update(void)
+bool play_update(void)
 {
     uint32_t down = keysDown();
     uint32_t repeat = keysDownRepeat();
+    touchPosition touch = { 0 };
 
-    // Until there's a menu, SELECT cycles through the modes.
-    if (down & KEY_SELECT) {
+    if (down & KEY_TOUCH)
+        touchRead(&touch);
+
+    if (confirming) {
+        if (handle_confirm(down, touch.px, touch.py))
+            return true;
+        dirty |= down != 0;
+    } else if ((down & KEY_START) || ((down & KEY_TOUCH) && inside(touch.px, touch.py, MENU_X,
+                                                                   HEADER_Y, MENU_W, HEADER_H))) {
+        confirming = true;
+        confirm_yes = false;
+        dirty = true;
+    } else if (down & KEY_SELECT) {
+        // Until modes can be picked from the menu, SELECT cycles through them.
         play_start(game.num_boards == 4 ? 1 : game.num_boards * 2);
-        return;
-    }
-
-    if (game_over(&game)) {
-        if (down & (KEY_A | KEY_START | KEY_TOUCH))
+    } else if (game_over(&game)) {
+        if (down & (KEY_A | KEY_TOUCH))
             play_start(game.num_boards);
     } else if (down & KEY_TOUCH) {
-        handle_touch();
+        handle_touch(touch.px, touch.py);
         dirty = true;
     } else if (repeat) {
         handle_buttons(repeat);
@@ -258,4 +332,5 @@ void play_update(void)
         draw();
         dirty = false;
     }
+    return false;
 }

@@ -6,7 +6,7 @@
 
 // The bottom row has one more slot than the others, so it's shifted half a
 // key to the left, like on a real keyboard. ENTER takes two slots.
-#define KEY_Y 66
+#define KEY_Y 70
 #define KEY_W 21
 #define KEY_H 34
 #define KEY_STEP_X 23
