@@ -1,10 +1,11 @@
 #!/usr/bin/env python3
 """Rasterize TrueType fonts into the C source used by the game.
 
-Usage: font.py output.c small.ttf:size medium.ttf:size large.ttf:size
+Usage: font.py output.c small.ttf:size medium.ttf:size large.ttf:size title.ttf:size
 
-The three fonts become FONT_SMALL, FONT_MEDIUM and FONT_LARGE. Glyphs cover
-ASCII and the Latin-1 letters, with 2 bits per pixel of coverage so they can
+The fonts become FONT_SMALL, FONT_MEDIUM, FONT_LARGE and FONT_TITLE. Glyphs
+cover ASCII and the Latin-1 letters, except for the title font, which only
+has the capital letters. They have 2 bits per pixel of coverage so they can
 be antialiased against the palette. Needs Pillow.
 """
 
@@ -12,17 +13,18 @@ import sys
 
 from PIL import ImageFont
 
-NAMES = ["small", "medium", "large"]
+NAMES = ["small", "medium", "large", "title"]
 CHARS = [c for c in range(0x20, 0x7F)] + [c for c in range(0xC0, 0x100)]
+TITLE_CHARS = [c for c in range(ord("A"), ord("Z") + 1)]
 
 
-def rasterize(path, size):
+def rasterize(path, size, chars):
     font = ImageFont.truetype(path, size)
     cap_height = -font.getbbox("H", anchor="ls")[1]
     glyphs = {}
     pixels = bytearray()
 
-    for code in CHARS:
+    for code in chars:
         char = chr(code)
         mask, (x, y) = font.getmask2(char, mode="L", anchor="ls")
         w, h = mask.size
@@ -43,7 +45,7 @@ def rasterize(path, size):
 
 
 def main():
-    if len(sys.argv) != 5:
+    if len(sys.argv) != 2 + len(NAMES):
         sys.exit(__doc__)
 
     with open(sys.argv[1], "w", encoding="ascii") as out:
@@ -55,7 +57,8 @@ def main():
         caps = []
         for name, arg in zip(NAMES, sys.argv[2:]):
             path, size = arg.rsplit(":", 1)
-            cap_height, glyphs, pixels = rasterize(path, int(size))
+            chars = TITLE_CHARS if name == "title" else CHARS
+            cap_height, glyphs, pixels = rasterize(path, int(size), chars)
             caps.append(cap_height)
 
             out.write(f"\nstatic const uint8_t {name}_pixels[] = {{\n")

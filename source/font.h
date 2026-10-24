@@ -7,6 +7,7 @@ enum font_size {
     FONT_SMALL,
     FONT_MEDIUM,
     FONT_LARGE,
+    FONT_TITLE,
 };
 
 // Position and size of a glyph relative to the pen on the baseline. Its
