@@ -33,11 +33,14 @@ int main(void)
                 gfx_fade_in();
                 playing = false;
             }
-        } else if (menu_update() != MENU_NONE) {
-            gfx_fade_out();
-            play_start(1);
-            gfx_fade_in();
-            playing = true;
+        } else {
+            enum menu_choice choice = menu_update();
+            if (choice != MENU_NONE) {
+                gfx_fade_out();
+                play_open(choice == MENU_DAILY);
+                gfx_fade_in();
+                playing = true;
+            }
         }
     }
 

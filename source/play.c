@@ -1,9 +1,11 @@
 #include <stdlib.h>
 #include <string.h>
+#include <time.h>
 
 #include <nds.h>
 
 #include "board.h"
+#include "daily.h"
 #include "game.h"
 #include "gfx.h"
 #include "keyboard.h"
@@ -21,31 +23,41 @@
 #define MESSAGE_Y 66
 #define MESSAGE_FRAMES 150
 
-#define DIALOG_X 28
-#define DIALOG_Y 56
-#define DIALOG_W 200
-#define DIALOG_H 84
-#define CHOICE_W 76
-#define CHOICE_H 26
-#define CHOICE_Y (DIALOG_Y + 46)
-#define NO_X (DIALOG_X + 16)
-#define YES_X (DIALOG_X + DIALOG_W - 16 - CHOICE_W)
+// The in-game menu lists the modes, then "Sair" and "Cancelar".
+#define ITEM_COUNT (MODE_COUNT + 2)
+#define ITEM_QUIT MODE_COUNT
+#define ITEM_CANCEL (MODE_COUNT + 1)
+#define ITEM_X 56
+#define ITEM_W 144
+#define ITEM_H 22
+#define ITEM_STEP 27
+#define ITEM_Y 34
+#define PANEL_PAD 8
 
-static const char *const mode_names[MAX_BOARDS + 1] = {
-    [1] = "Quina",
-    [2] = "Duque",
-    [4] = "Quadra",
+static const int mode_boards[MODE_COUNT] = { 1, 2, 4 };
+static const char *const mode_names[MODE_COUNT] = { "Quina", "Duque", "Quadra" };
+
+struct session {
+    bool started;
+    int day;
+    struct game game;
+    char typed[WORD_LEN];
+    int cursor;
 };
 
-static struct game game;
-static char typed[WORD_LEN];
-static int cursor;
+// Indexed by daily and then by mode, so each keeps its own progress.
+static struct session sessions[2][MODE_COUNT];
+static int last_mode[2];
+
+static bool daily;
+static int mode;
+static struct session *cur;
 static bool focus_keys;
 static int focused_key;
 static const char *message;
 static int message_timer;
-static bool confirming;
-static bool confirm_yes;
+static bool menu_open;
+static int menu_focus;
 static bool dirty;
 
 static void draw(void);
@@ -56,10 +68,8 @@ static void show_message(const char *text)
     message_timer = MESSAGE_FRAMES;
 }
 
-void play_start(int num_boards)
+static void random_answers(int num_boards, char answers[][WORD_LEN])
 {
-    char answers[MAX_BOARDS][WORD_LEN];
-
     for (int b = 0; b < num_boards; b++) {
         bool repeated;
         do {
@@ -69,47 +79,97 @@ void play_start(int num_boards)
                 repeated |= memcmp(answers[b], answers[other], WORD_LEN) == 0;
         } while (repeated);
     }
+}
 
-    game_start(&game, num_boards, answers);
-    memset(typed, 0, sizeof(typed));
-    cursor = 0;
+static void new_game(struct session *s, int m)
+{
+    char answers[MAX_BOARDS][WORD_LEN];
+
+    if (daily) {
+        s->day = daily_day(time(NULL));
+        daily_answers(s->day, mode_boards[m], answers);
+    } else {
+        random_answers(mode_boards[m], answers);
+    }
+    game_start(&s->game, mode_boards[m], answers);
+    memset(s->typed, 0, sizeof(s->typed));
+    s->cursor = 0;
+    s->started = true;
+}
+
+static void switch_mode(int m)
+{
+    mode = m;
+    last_mode[daily] = m;
+    cur = &sessions[daily][m];
+
+    // A daily game from an earlier day gives way to today's.
+    if (!cur->started || (daily && cur->day != daily_day(time(NULL))))
+        new_game(cur, m);
+
     focus_keys = true;
     focused_key = 0;
     message = NULL;
-    confirming = false;
+    menu_open = false;
     draw();
+}
+
+void play_open(bool is_daily)
+{
+    daily = is_daily;
+    switch_mode(last_mode[daily]);
+}
+
+int play_daily_done(void)
+{
+    int today = daily_day(time(NULL));
+    int done = 0;
+
+    for (int m = 0; m < MODE_COUNT; m++) {
+        struct session *s = &sessions[1][m];
+        if (s->started && s->day == today && game_over(&s->game))
+            done++;
+    }
+    return done;
 }
 
 static void type_letter(char c)
 {
-    typed[cursor] = c;
-    if (cursor < WORD_LEN - 1)
-        cursor++;
+    cur->typed[cur->cursor] = c;
+    if (cur->cursor < WORD_LEN - 1)
+        cur->cursor++;
 }
 
 static void erase(void)
 {
-    if (!typed[cursor] && cursor > 0)
-        cursor--;
-    typed[cursor] = 0;
+    if (!cur->typed[cur->cursor] && cur->cursor > 0)
+        cur->cursor--;
+    cur->typed[cur->cursor] = 0;
+}
+
+static void move_cursor(int dx)
+{
+    int cursor = cur->cursor + dx;
+    if (cursor >= 0 && cursor < WORD_LEN)
+        cur->cursor = cursor;
 }
 
 static void submit(void)
 {
-    if (memchr(typed, 0, WORD_LEN)) {
+    if (memchr(cur->typed, 0, WORD_LEN)) {
         show_message("Só palavras com 5 letras");
         return;
     }
 
-    int index = word_find(typed);
+    int index = word_find(cur->typed);
     if (index < 0) {
         show_message("Essa palavra não é aceita");
         return;
     }
 
-    game_guess(&game, word_text(index));
-    memset(typed, 0, sizeof(typed));
-    cursor = 0;
+    game_guess(&cur->game, word_text(index));
+    memset(cur->typed, 0, sizeof(cur->typed));
+    cur->cursor = 0;
     message = NULL;
 }
 
@@ -119,10 +179,10 @@ static void press(char c)
         submit();
     else if (c == KB_ERASE)
         erase();
-    else if (c == KB_LEFT && cursor > 0)
-        cursor--;
-    else if (c == KB_RIGHT && cursor < WORD_LEN - 1)
-        cursor++;
+    else if (c == KB_LEFT)
+        move_cursor(-1);
+    else if (c == KB_RIGHT)
+        move_cursor(1);
     else if (c >= 'a' && c <= 'z')
         type_letter(c);
 }
@@ -137,7 +197,7 @@ static void handle_touch(int x, int y)
     if (inside(x, y, PROMPT_X, PROMPT_Y, SCREEN_W - 2 * PROMPT_X, PROMPT_TILE)) {
         int box = (x - PROMPT_X) / (PROMPT_TILE + PROMPT_GAP);
         if (box < WORD_LEN) {
-            cursor = box;
+            cur->cursor = box;
             focus_keys = false;
         }
         return;
@@ -171,53 +231,73 @@ static void handle_buttons(uint32_t down)
     } else {
         if (down & KEY_A)
             submit();
-        if ((down & KEY_LEFT) && cursor > 0)
-            cursor--;
-        if ((down & KEY_RIGHT) && cursor < WORD_LEN - 1)
-            cursor++;
+        if (down & KEY_LEFT)
+            move_cursor(-1);
+        if (down & KEY_RIGHT)
+            move_cursor(1);
         if (down & (KEY_UP | KEY_DOWN))
             focus_keys = true;
     }
 }
 
-// Returns true when the player confirms going back to the menu.
-static bool handle_confirm(uint32_t down, int x, int y)
+static void change_mode(int m)
+{
+    gfx_fade_out();
+    switch_mode(m);
+    gfx_fade_in();
+}
+
+// Returns true when the player picks "Sair".
+static bool choose_item(int item)
+{
+    if (item == ITEM_QUIT)
+        return true;
+    if (item < MODE_COUNT && item != mode)
+        change_mode(item);
+    else
+        menu_open = false;
+    return false;
+}
+
+static bool handle_menu(uint32_t down, int x, int y)
 {
     if (down & KEY_TOUCH) {
-        if (inside(x, y, YES_X, CHOICE_Y, CHOICE_W, CHOICE_H))
-            return true;
-        if (inside(x, y, NO_X, CHOICE_Y, CHOICE_W, CHOICE_H))
-            confirming = false;
+        for (int i = 0; i < ITEM_COUNT; i++) {
+            if (inside(x, y, ITEM_X, ITEM_Y + i * ITEM_STEP, ITEM_W, ITEM_H))
+                return choose_item(i);
+        }
     }
-    if (down & (KEY_LEFT | KEY_RIGHT))
-        confirm_yes = !confirm_yes;
-    if (down & KEY_A) {
-        if (confirm_yes)
-            return true;
-        confirming = false;
-    }
+    if (down & KEY_UP)
+        menu_focus = (menu_focus + ITEM_COUNT - 1) % ITEM_COUNT;
+    if (down & KEY_DOWN)
+        menu_focus = (menu_focus + 1) % ITEM_COUNT;
+    if (down & KEY_A)
+        return choose_item(menu_focus);
     if (down & (KEY_B | KEY_START))
-        confirming = false;
+        menu_open = false;
     return false;
 }
 
 static void draw_header(void)
 {
-    const char *name = mode_names[game.num_boards];
+    const char *name = mode_names[mode];
+    const char *kind = daily ? "diário" : "livre";
+    int name_w = gfx_text_width(name, FONT_MEDIUM);
+    int baseline = HEADER_Y + (HEADER_H + fonts[FONT_MEDIUM].cap_height) / 2;
 
-    gfx_button(BOTTOM, MENU_X, HEADER_Y, MENU_W, HEADER_H, "Menu", FONT_SMALL, false);
-    gfx_text(BOTTOM, SCREEN_W - 6 - gfx_text_width(name, FONT_MEDIUM) / 2,
-             HEADER_Y + (HEADER_H + fonts[FONT_MEDIUM].cap_height) / 2, name, FONT_MEDIUM,
-             COLOR_TEXT);
+    gfx_button(BOTTOM, MENU_X, HEADER_Y, MENU_W, HEADER_H, "Menu", FONT_SMALL, COLOR_KEY, false);
+    gfx_text(BOTTOM, SCREEN_W - 6 - name_w / 2, baseline, name, FONT_MEDIUM, COLOR_TEXT);
+    gfx_text(BOTTOM, SCREEN_W - 12 - name_w - gfx_text_width(kind, FONT_SMALL) / 2, baseline, kind,
+             FONT_SMALL, COLOR_DIM_TEXT);
 }
 
 static void draw_prompt(void)
 {
     for (int i = 0; i < WORD_LEN; i++) {
         int x = PROMPT_X + i * (PROMPT_TILE + PROMPT_GAP);
-        bool selected = i == cursor;
-        draw_tile(BOTTOM, x, PROMPT_Y, PROMPT_TILE, PROMPT_TILE, FONT_LARGE, typed[i], COLOR_BG,
-                  true, selected);
+        bool selected = i == cur->cursor;
+        draw_tile(BOTTOM, x, PROMPT_Y, PROMPT_TILE, PROMPT_TILE, FONT_LARGE, cur->typed[i],
+                  COLOR_BG, true, selected);
         if (selected && !focus_keys)
             gfx_frame(BOTTOM, x, PROMPT_Y, PROMPT_TILE, PROMPT_TILE, 2, COLOR_TEXT);
     }
@@ -229,10 +309,10 @@ static void answers_text(char *out)
 {
     char word[WORD_LEN];
 
-    for (int b = 0; b < game.num_boards; b++) {
+    for (int b = 0; b < cur->game.num_boards; b++) {
         if (b > 0)
             *out++ = ' ';
-        word_display(word_find(game.answers[b]), word);
+        word_display(word_find(cur->game.answers[b]), word);
         for (int i = 0; i < WORD_LEN; i++) {
             unsigned char c = word[i];
             if (c >= 0x80) {
@@ -248,35 +328,46 @@ static void answers_text(char *out)
 
 static void draw_result(void)
 {
-    if (game_won(&game)) {
+    int num_boards = cur->game.num_boards;
+
+    if (game_won(&cur->game)) {
         gfx_text(BOTTOM, SCREEN_W / 2, PROMPT_Y + 21, "Parabéns!", FONT_LARGE, COLOR_TEXT);
     } else {
         char text[MAX_BOARDS * (WORD_LEN * 2 + 1)];
-        bool one = game.num_boards == 1;
 
         answers_text(text);
-        gfx_text(BOTTOM, SCREEN_W / 2, PROMPT_Y + 6, one ? "A palavra era" : "As palavras eram",
-                 FONT_SMALL, COLOR_DIM_TEXT);
+        gfx_text(BOTTOM, SCREEN_W / 2, PROMPT_Y + 6,
+                 num_boards == 1 ? "A palavra era" : "As palavras eram", FONT_SMALL,
+                 COLOR_DIM_TEXT);
         gfx_text(BOTTOM, SCREEN_W / 2, PROMPT_Y + 26, text,
-                 game.num_boards == 4 ? FONT_MEDIUM : FONT_LARGE, COLOR_TEXT);
+                 num_boards == 4 ? FONT_MEDIUM : FONT_LARGE, COLOR_TEXT);
     }
-    gfx_text(BOTTOM, SCREEN_W / 2, MESSAGE_Y, "A: jogar de novo", FONT_MEDIUM, COLOR_DIM_TEXT);
+    gfx_text(BOTTOM, SCREEN_W / 2, MESSAGE_Y, daily ? "Novo desafio amanhã" : "A: jogar de novo",
+             FONT_MEDIUM, COLOR_DIM_TEXT);
 }
 
-static void draw_confirm(void)
+static void draw_menu(void)
 {
-    gfx_rect(BOTTOM, DIALOG_X - 2, DIALOG_Y - 2, DIALOG_W + 4, DIALOG_H + 4, COLOR_BG);
-    gfx_rect(BOTTOM, DIALOG_X, DIALOG_Y, DIALOG_W, DIALOG_H, COLOR_ABSENT);
-    gfx_text(BOTTOM, SCREEN_W / 2, DIALOG_Y + 28, "Voltar ao menu?", FONT_MEDIUM, COLOR_TEXT);
-    gfx_button(BOTTOM, NO_X, CHOICE_Y, CHOICE_W, CHOICE_H, "Não", FONT_MEDIUM, !confirm_yes);
-    gfx_button(BOTTOM, YES_X, CHOICE_Y, CHOICE_W, CHOICE_H, "Sim", FONT_MEDIUM, confirm_yes);
+    int panel_y = ITEM_Y - PANEL_PAD;
+    int panel_h = ITEM_COUNT * ITEM_STEP - (ITEM_STEP - ITEM_H) + 2 * PANEL_PAD;
+
+    gfx_rect(BOTTOM, ITEM_X - PANEL_PAD - 2, panel_y - 2, ITEM_W + 2 * PANEL_PAD + 4, panel_h + 4,
+             COLOR_BG);
+    gfx_rect(BOTTOM, ITEM_X - PANEL_PAD, panel_y, ITEM_W + 2 * PANEL_PAD, panel_h, COLOR_ABSENT);
+
+    for (int i = 0; i < ITEM_COUNT; i++) {
+        const char *label = i < MODE_COUNT ? mode_names[i] : i == ITEM_QUIT ? "Sair" : "Cancelar";
+        enum color fill = i == mode ? COLOR_CORRECT : COLOR_KEY;
+        gfx_button(BOTTOM, ITEM_X, ITEM_Y + i * ITEM_STEP, ITEM_W, ITEM_H, label, FONT_MEDIUM, fill,
+                   i == menu_focus);
+    }
 }
 
 static void draw(void)
 {
-    bool over = game_over(&game);
+    bool over = game_over(&cur->game);
 
-    board_draw(&game, typed, cursor);
+    board_draw(&cur->game, cur->typed, cur->cursor);
 
     gfx_clear(BOTTOM, COLOR_BG);
     draw_header();
@@ -286,9 +377,9 @@ static void draw(void)
         draw_prompt();
     if (message)
         gfx_text(BOTTOM, SCREEN_W / 2, MESSAGE_Y, message, FONT_MEDIUM, COLOR_TEXT);
-    keyboard_draw(&game, focus_keys && !over && !confirming ? focused_key : -1);
-    if (confirming)
-        draw_confirm();
+    keyboard_draw(&cur->game, focus_keys && !over && !menu_open ? focused_key : -1);
+    if (menu_open)
+        draw_menu();
 }
 
 bool play_update(void)
@@ -300,21 +391,22 @@ bool play_update(void)
     if (down & KEY_TOUCH)
         touchRead(&touch);
 
-    if (confirming) {
-        if (handle_confirm(down, touch.px, touch.py))
+    if (menu_open) {
+        if (handle_menu(down, touch.px, touch.py))
             return true;
         dirty |= down != 0;
     } else if ((down & KEY_START) || ((down & KEY_TOUCH) && inside(touch.px, touch.py, MENU_X,
                                                                    HEADER_Y, MENU_W, HEADER_H))) {
-        confirming = true;
-        confirm_yes = false;
+        menu_open = true;
+        menu_focus = mode;
         dirty = true;
     } else if (down & KEY_SELECT) {
-        // Until modes can be picked from the menu, SELECT cycles through them.
-        play_start(game.num_boards == 4 ? 1 : game.num_boards * 2);
-    } else if (game_over(&game)) {
-        if (down & (KEY_A | KEY_TOUCH))
-            play_start(game.num_boards);
+        change_mode((mode + 1) % MODE_COUNT);
+    } else if (game_over(&cur->game)) {
+        if (!daily && (down & (KEY_A | KEY_TOUCH))) {
+            new_game(cur, mode);
+            dirty = true;
+        }
     } else if (down & KEY_TOUCH) {
         handle_touch(touch.px, touch.py);
         dirty = true;

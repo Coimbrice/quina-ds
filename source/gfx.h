@@ -53,8 +53,8 @@ void gfx_letter(enum screen s, int x, int y, int c, enum font_size size, enum co
 void gfx_text(enum screen s, int x, int y, const char *text, enum font_size size, enum color color);
 int gfx_text_width(const char *text, enum font_size size);
 
-// A key-colored box with a centered label, outlined when focused.
+// A box with a centered label, outlined when focused.
 void gfx_button(enum screen s, int x, int y, int w, int h, const char *text, enum font_size size,
-                bool focused);
+                enum color fill, bool focused);
 
 #endif

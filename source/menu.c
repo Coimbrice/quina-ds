@@ -73,7 +73,7 @@ static void draw(void)
     button_labels(labels);
     for (int i = 0; i < BUTTON_COUNT; i++) {
         gfx_button(BOTTOM, BUTTON_X, BUTTON_Y + i * BUTTON_STEP, BUTTON_W, BUTTON_H, labels[i],
-                   FONT_MEDIUM, i == focused);
+                   FONT_MEDIUM, COLOR_KEY, i == focused);
     }
 }
 
