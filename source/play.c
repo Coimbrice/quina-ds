@@ -66,7 +66,7 @@ static bool menu_open;
 static int menu_focus;
 static bool dirty;
 
-static const char restart_message[] = "Aperte START de novo para recomeçar";
+static const char restart_message[] = "START de novo para recomeçar";
 
 // What the result screen said last, to redraw it when the countdown changes.
 static char countdown[48];
