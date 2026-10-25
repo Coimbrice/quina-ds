@@ -66,6 +66,8 @@ static bool menu_open;
 static int menu_focus;
 static bool dirty;
 
+static const char restart_message[] = "Aperte START de novo para recomeçar";
+
 // What the result screen said last, to redraw it when the countdown changes.
 static char countdown[48];
 
@@ -281,6 +283,18 @@ static void handle_buttons(uint32_t down)
     }
 }
 
+static void restart(void)
+{
+    // Giving up on a game that has guesses counts as a loss.
+    if (!game_over(&cur->game) && cur->game.num_guesses > 0) {
+        stats_record(&save.stats[0][mode], false, 0, false, 0);
+        save_commit();
+    }
+    new_game();
+    showing_stats = false;
+    message = NULL;
+}
+
 static void change_mode(int m)
 {
     gfx_fade_out(false);
@@ -400,8 +414,8 @@ static void draw_result(void)
     }
     if (daily)
         countdown_text(countdown, sizeof(countdown));
-    gfx_text(BOTTOM, SCREEN_W / 2, MESSAGE_Y, daily ? countdown : "A: jogar de novo", FONT_MEDIUM,
-             COLOR_DIM_TEXT);
+    gfx_text(BOTTOM, SCREEN_W / 2, MESSAGE_Y, daily ? countdown : "A ou START: jogar de novo",
+             FONT_MEDIUM, COLOR_DIM_TEXT);
 }
 
 static void draw_menu(void)
@@ -476,10 +490,18 @@ bool play_update(void)
         if (handle_menu(down, touch.px, touch.py))
             return true;
         dirty |= down != 0;
-    } else if ((down & KEY_START) || ((down & KEY_TOUCH) && inside(touch.px, touch.py, MENU_X,
-                                                                   HEADER_Y, MENU_W, HEADER_H))) {
+    } else if ((down & KEY_X) || (daily && (down & KEY_START)) ||
+               ((down & KEY_TOUCH) &&
+                inside(touch.px, touch.py, MENU_X, HEADER_Y, MENU_W, HEADER_H))) {
         menu_open = true;
         menu_focus = mode;
+        dirty = true;
+    } else if (down & KEY_START) {
+        // In free play START starts over, asking twice if the game is going.
+        if (game_over(&cur->game) || cur->game.num_guesses == 0 || message == restart_message)
+            restart();
+        else
+            show_message(restart_message);
         dirty = true;
     } else if ((down & KEY_SELECT) || (stats_timer && --stats_timer == 0)) {
         // The timer only ever opens the stats, after a game ends.
@@ -490,8 +512,7 @@ bool play_update(void)
         gfx_fade_in(true);
     } else if (game_over(&cur->game)) {
         if (!daily && (down & (KEY_A | KEY_TOUCH))) {
-            new_game();
-            showing_stats = false;
+            restart();
             dirty = true;
         }
     } else if (down & KEY_TOUCH) {
