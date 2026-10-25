@@ -1,3 +1,4 @@
+#include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 #include <time.h>
@@ -64,6 +65,9 @@ static int message_timer;
 static bool menu_open;
 static int menu_focus;
 static bool dirty;
+
+// What the result screen said last, to redraw it when the countdown changes.
+static char countdown[48];
 
 static void draw(void);
 
@@ -365,6 +369,19 @@ static void answers_text(char *out)
     *out = 0;
 }
 
+static void countdown_text(char *out, size_t size)
+{
+    int left = 86400 - time(NULL) % 86400;
+
+    if (left >= 3600) {
+        int hours = left / 3600;
+        snprintf(out, size, "Novo desafio em %d hora%s", hours, hours == 1 ? "" : "s");
+    } else {
+        int minutes = (left + 59) / 60;
+        snprintf(out, size, "Novo desafio em %d minuto%s", minutes, minutes == 1 ? "" : "s");
+    }
+}
+
 static void draw_result(void)
 {
     int num_boards = cur->game.num_boards;
@@ -381,10 +398,10 @@ static void draw_result(void)
         gfx_text(BOTTOM, SCREEN_W / 2, PROMPT_Y + 26, text,
                  num_boards == 4 ? FONT_MEDIUM : FONT_LARGE, COLOR_TEXT);
     }
-    gfx_text(BOTTOM, SCREEN_W / 2, MESSAGE_Y,
-             daily ? "Novo desafio amanhã   SELECT: estatísticas"
-                   : "A: jogar de novo   SELECT: estatísticas",
-             FONT_SMALL, COLOR_DIM_TEXT);
+    if (daily)
+        countdown_text(countdown, sizeof(countdown));
+    gfx_text(BOTTOM, SCREEN_W / 2, MESSAGE_Y, daily ? countdown : "A: jogar de novo", FONT_MEDIUM,
+             COLOR_DIM_TEXT);
 }
 
 static void draw_menu(void)
@@ -442,6 +459,18 @@ bool play_update(void)
 
     if (down & KEY_TOUCH)
         touchRead(&touch);
+
+    if (daily && !menu_open) {
+        char text[sizeof(countdown)];
+
+        // At midnight a finished daily gives way to the new one.
+        if (saved->day != daily_day(time(NULL)) && game_over(&cur->game)) {
+            switch_mode(mode);
+            return false;
+        }
+        countdown_text(text, sizeof(text));
+        dirty |= game_over(&cur->game) && strcmp(text, countdown) != 0;
+    }
 
     if (menu_open) {
         if (handle_menu(down, touch.px, touch.py))
