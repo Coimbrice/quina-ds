@@ -23,7 +23,8 @@
 #define PROMPT_GAP 4
 #define PROMPT_X ((SCREEN_W - WORD_LEN * PROMPT_TILE - (WORD_LEN - 1) * PROMPT_GAP) / 2)
 #define PROMPT_Y 25
-#define MESSAGE_Y 66
+#define MESSAGE_Y 68
+#define HINT_Y 79
 #define MESSAGE_FRAMES 150
 #define STATS_DELAY 60
 
@@ -221,8 +222,12 @@ static void submit(void)
     save_commit();
 }
 
+// Every key press goes through here so the key on screen sinks, even when it
+// came from a button.
 static void press(char c)
 {
+    keyboard_press(keyboard_find(c));
+
     if (c == KB_ENTER)
         submit();
     else if (c == KB_ERASE)
@@ -261,9 +266,9 @@ static void handle_touch(int x, int y)
 static void handle_buttons(uint32_t down)
 {
     if (down & (KEY_B | KEY_L))
-        erase();
+        press(KB_ERASE);
     if (down & KEY_R)
-        submit();
+        press(KB_ENTER);
 
     if (focus_keys) {
         if (down & KEY_A)
@@ -278,7 +283,7 @@ static void handle_buttons(uint32_t down)
             focused_key = keyboard_move(focused_key, 0, 1);
     } else {
         if (down & KEY_A)
-            submit();
+            press(KB_ENTER);
         if (down & KEY_LEFT)
             move_cursor(-1);
         if (down & KEY_RIGHT)
@@ -406,21 +411,22 @@ static void draw_result(void)
     int num_boards = cur->game.num_boards;
 
     if (game_won(&cur->game)) {
-        gfx_text(BOTTOM, SCREEN_W / 2, PROMPT_Y + 21, "Parabéns!", FONT_LARGE, COLOR_TEXT);
+        gfx_text(BOTTOM, SCREEN_W / 2, PROMPT_Y + 23, "Parabéns!", FONT_LARGE, COLOR_TEXT);
     } else {
         char text[MAX_BOARDS * (WORD_LEN * 2 + 1)];
 
         answers_text(text);
-        gfx_text(BOTTOM, SCREEN_W / 2, PROMPT_Y + 6,
+        gfx_text(BOTTOM, SCREEN_W / 2, PROMPT_Y + 8,
                  num_boards == 1 ? "A palavra era" : "As palavras eram", FONT_SMALL,
                  COLOR_DIM_TEXT);
-        gfx_text(BOTTOM, SCREEN_W / 2, PROMPT_Y + 26, text,
+        gfx_text(BOTTOM, SCREEN_W / 2, PROMPT_Y + 28, text,
                  num_boards == 4 ? FONT_MEDIUM : FONT_LARGE, COLOR_TEXT);
     }
     if (daily)
         countdown_text(countdown, sizeof(countdown));
     gfx_text(BOTTOM, SCREEN_W / 2, MESSAGE_Y, daily ? countdown : "A ou START: jogar de novo",
              FONT_MEDIUM, COLOR_DIM_TEXT);
+    gfx_text(BOTTOM, SCREEN_W / 2, HINT_Y, "SELECT: estatísticas", FONT_SMALL, COLOR_DIM_TEXT);
 }
 
 static void draw_menu(void)
@@ -527,6 +533,8 @@ bool play_update(void)
         handle_buttons(repeat);
         dirty = true;
     }
+
+    dirty |= keyboard_animate();
 
     if (message && --message_timer == 0) {
         message = NULL;

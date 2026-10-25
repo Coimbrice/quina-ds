@@ -20,5 +20,12 @@ int keyboard_hit(int x, int y);
 int keyboard_move(int k, int dx, int dy);
 // Letter of a key, or one of the KB_ codes above.
 char keyboard_char(int k);
+// Key with a letter or KB_ code, or -1.
+int keyboard_find(char c);
+
+// Shows a key as pressed for a few frames. keyboard_animate advances the
+// animation and returns true while the keyboard needs redrawing.
+void keyboard_press(int k);
+bool keyboard_animate(void);
 
 #endif
