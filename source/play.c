@@ -10,6 +10,8 @@
 #include "gfx.h"
 #include "keyboard.h"
 #include "play.h"
+#include "save.h"
+#include "stats.h"
 #include "words.h"
 
 #define HEADER_Y 3
@@ -22,6 +24,7 @@
 #define PROMPT_Y 25
 #define MESSAGE_Y 66
 #define MESSAGE_FRAMES 150
+#define STATS_DELAY 60
 
 // The in-game menu lists the modes, then "Sair" and "Cancelar".
 #define ITEM_COUNT (MODE_COUNT + 2)
@@ -36,21 +39,24 @@
 
 static const char *const mode_names[MODE_COUNT] = { "Quina", "Duque", "Quadra" };
 
+// The games themselves are kept in the save. Sessions also remember what
+// was being typed while the player is in another mode.
 struct session {
-    bool started;
-    int day;
+    bool loaded;
     struct game game;
     char typed[WORD_LEN];
     int cursor;
 };
 
-// Indexed by daily and then by mode, so each keeps its own progress.
+// Indexed by daily and then by mode, like the save.
 static struct session sessions[2][MODE_COUNT];
-static int last_mode[2];
 
 static bool daily;
 static int mode;
 static struct session *cur;
+static struct saved_game *saved;
+static bool showing_stats;
+static int stats_timer;
 static bool focus_keys;
 static int focused_key;
 static const char *message;
@@ -80,43 +86,62 @@ static void random_answers(int num_boards, char answers[][WORD_LEN])
     }
 }
 
-static void new_game(struct session *s, int m)
+static void load_game(struct game *g, const struct saved_game *sg, int m)
 {
-    char answers[MAX_BOARDS][WORD_LEN];
+    game_start(g, mode_boards[m], sg->answers);
+    for (int i = 0; i < sg->num_guesses; i++)
+        game_guess(g, sg->guesses[i]);
+}
 
+static void new_game(void)
+{
+    memset(saved, 0, sizeof(*saved));
     if (daily) {
-        s->day = daily_day(time(NULL));
-        daily_answers(s->day, mode_boards[m], answers);
+        saved->day = daily_day(time(NULL));
+        daily_answers(saved->day, mode_boards[mode], saved->answers);
     } else {
-        random_answers(mode_boards[m], answers);
+        random_answers(mode_boards[mode], saved->answers);
     }
-    game_start(&s->game, mode_boards[m], answers);
-    memset(s->typed, 0, sizeof(s->typed));
-    s->cursor = 0;
-    s->started = true;
+    saved->started = 1;
+    save_commit();
+
+    load_game(&cur->game, saved, mode);
+    memset(cur->typed, 0, sizeof(cur->typed));
+    cur->cursor = 0;
+    cur->loaded = true;
 }
 
 static void switch_mode(int m)
 {
     mode = m;
-    last_mode[daily] = m;
     cur = &sessions[daily][m];
+    saved = &save.games[daily][m];
+    if (save.last_mode[daily] != m) {
+        save.last_mode[daily] = m;
+        save_commit();
+    }
 
     // A daily game from an earlier day gives way to today's.
-    if (!cur->started || (daily && cur->day != daily_day(time(NULL))))
-        new_game(cur, m);
+    if (!saved->started || (daily && saved->day != daily_day(time(NULL)))) {
+        new_game();
+    } else if (!cur->loaded) {
+        load_game(&cur->game, saved, m);
+        cur->loaded = true;
+    }
 
     focus_keys = true;
     focused_key = 0;
     message = NULL;
     menu_open = false;
+    showing_stats = false;
+    stats_timer = 0;
     draw();
 }
 
 void play_open(bool is_daily)
 {
     daily = is_daily;
-    switch_mode(last_mode[daily]);
+    switch_mode(save.last_mode[daily]);
 }
 
 int play_daily_done(void)
@@ -125,8 +150,13 @@ int play_daily_done(void)
     int done = 0;
 
     for (int m = 0; m < MODE_COUNT; m++) {
-        struct session *s = &sessions[1][m];
-        if (s->started && s->day == today && game_over(&s->game))
+        const struct saved_game *sg = &save.games[1][m];
+        struct game g;
+
+        if (!sg->started || sg->day != today)
+            continue;
+        load_game(&g, sg, m);
+        if (game_over(&g))
             done++;
     }
     return done;
@@ -166,10 +196,18 @@ static void submit(void)
         return;
     }
 
+    memcpy(saved->guesses[saved->num_guesses++], word_text(index), WORD_LEN);
     game_guess(&cur->game, word_text(index));
     memset(cur->typed, 0, sizeof(cur->typed));
     cur->cursor = 0;
     message = NULL;
+
+    if (game_over(&cur->game)) {
+        stats_record(&save.stats[daily][mode], daily, saved->day, game_won(&cur->game),
+                     cur->game.num_guesses);
+        stats_timer = STATS_DELAY;
+    }
+    save_commit();
 }
 
 static void press(char c)
@@ -343,8 +381,10 @@ static void draw_result(void)
         gfx_text(BOTTOM, SCREEN_W / 2, PROMPT_Y + 26, text,
                  num_boards == 4 ? FONT_MEDIUM : FONT_LARGE, COLOR_TEXT);
     }
-    gfx_text(BOTTOM, SCREEN_W / 2, MESSAGE_Y, daily ? "Novo desafio amanhã" : "A: jogar de novo",
-             FONT_MEDIUM, COLOR_DIM_TEXT);
+    gfx_text(BOTTOM, SCREEN_W / 2, MESSAGE_Y,
+             daily ? "Novo desafio amanhã   SELECT: estatísticas"
+                   : "A: jogar de novo   SELECT: estatísticas",
+             FONT_SMALL, COLOR_DIM_TEXT);
 }
 
 static void draw_menu(void)
@@ -368,7 +408,18 @@ static void draw(void)
 {
     bool over = game_over(&cur->game);
 
-    board_draw(&cur->game, cur->typed, cur->cursor);
+    if (showing_stats) {
+        char title[32];
+        int last = -1;
+
+        if (over)
+            last = game_won(&cur->game) ? cur->game.num_guesses : 0;
+        strcpy(title, mode_names[mode]);
+        strcat(title, daily ? ", desafio diário" : ", jogo livre");
+        stats_draw(&save.stats[daily][mode], title, cur->game.max_guesses, last);
+    } else {
+        board_draw(&cur->game, cur->typed, cur->cursor);
+    }
 
     gfx_clear(BOTTOM, COLOR_BG);
     draw_header();
@@ -401,11 +452,17 @@ bool play_update(void)
         menu_open = true;
         menu_focus = mode;
         dirty = true;
-    } else if (down & KEY_SELECT) {
-        change_mode((mode + 1) % MODE_COUNT);
+    } else if ((down & KEY_SELECT) || (stats_timer && --stats_timer == 0)) {
+        // The timer only ever opens the stats, after a game ends.
+        showing_stats = (down & KEY_SELECT) ? !showing_stats : true;
+        stats_timer = 0;
+        gfx_fade_out();
+        draw();
+        gfx_fade_in();
     } else if (game_over(&cur->game)) {
         if (!daily && (down & (KEY_A | KEY_TOUCH))) {
-            new_game(cur, mode);
+            new_game();
+            showing_stats = false;
             dirty = true;
         }
     } else if (down & KEY_TOUCH) {

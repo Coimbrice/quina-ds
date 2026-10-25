@@ -6,6 +6,7 @@
 #include "gfx.h"
 #include "menu.h"
 #include "play.h"
+#include "save.h"
 
 #define LOGO_TILE 44
 #define LOGO_GAP 5
@@ -27,9 +28,6 @@ enum page {
     PAGE_MAIN,
     PAGE_OPTIONS,
 };
-
-bool sound_effects_on = true;
-bool music_on = true;
 
 // clang-format off
 static const char *const check_icon[] = {
@@ -115,8 +113,8 @@ static void draw(void)
     } else if (page == PAGE_MAIN) {
         draw_main();
     } else {
-        draw_checkbox(0, "Efeitos sonoros", sound_effects_on);
-        draw_checkbox(1, "Música", music_on);
+        draw_checkbox(0, "Efeitos sonoros", save.sound_effects);
+        draw_checkbox(1, "Música", save.music);
         gfx_button(BOTTOM, ITEM_X, item_y(2), ITEM_W, ITEM_H, "Voltar", FONT_MEDIUM, COLOR_KEY,
                    focused == 2);
     }
@@ -141,9 +139,11 @@ static enum menu_choice activate(int item)
         page = PAGE_OPTIONS;
         focused = 0;
     } else if (item == 0) {
-        sound_effects_on = !sound_effects_on;
+        save.sound_effects = !save.sound_effects;
+        save_commit();
     } else if (item == 1) {
-        music_on = !music_on;
+        save.music = !save.music;
+        save_commit();
     } else {
         page = PAGE_MAIN;
         focused = 2;
