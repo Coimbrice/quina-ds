@@ -1,19 +1,24 @@
+#include <stdio.h>
+
 #include <nds.h>
 
 #include "board.h"
 #include "gfx.h"
 #include "menu.h"
+#include "play.h"
 
 #define LOGO_TILE 44
 #define LOGO_GAP 5
 #define LOGO_Y 50
 
-#define BUTTON_X 38
-#define BUTTON_W 180
-#define BUTTON_H 34
-#define BUTTON_Y 30
-#define BUTTON_STEP 46
-#define BUTTON_COUNT 3
+#define ITEM_X 38
+#define ITEM_W 180
+#define ITEM_H 34
+#define ITEM_Y 30
+#define ITEM_STEP 46
+#define ITEM_COUNT 3
+
+#define CHECK_SIZE 20
 
 #define BLINK_FRAMES 40
 
@@ -25,6 +30,19 @@ enum page {
 
 bool sound_effects_on = true;
 bool music_on = true;
+
+// clang-format off
+static const char *const check_icon[] = {
+    "..........##",
+    ".........###",
+    "........###.",
+    "##.....###..",
+    "###...###...",
+    ".###.###....",
+    "..#####.....",
+    "...###......",
+};
+// clang-format on
 
 static enum page page;
 static int focused;
@@ -46,34 +64,61 @@ static void draw_logo(void)
              COLOR_DIM_TEXT);
 }
 
-static void button_labels(const char *labels[BUTTON_COUNT])
+static int item_y(int i)
 {
-    if (page == PAGE_MAIN) {
-        labels[0] = "Desafio diário";
-        labels[1] = "Jogo livre";
-        labels[2] = "Opções";
-    } else {
-        labels[0] = sound_effects_on ? "Efeitos sonoros: sim" : "Efeitos sonoros: não";
-        labels[1] = music_on ? "Música: sim" : "Música: não";
-        labels[2] = "Voltar";
-    }
+    return ITEM_Y + i * ITEM_STEP;
+}
+
+static void draw_main(void)
+{
+    static char daily[32];
+    int done = play_daily_done();
+
+    // The daily button turns green once all of today's challenges are over.
+    if (done > 0 && done < MODE_COUNT)
+        snprintf(daily, sizeof(daily), "Desafio diário %d/%d", done, MODE_COUNT);
+    else
+        snprintf(daily, sizeof(daily), "Desafio diário");
+
+    gfx_button(BOTTOM, ITEM_X, item_y(0), ITEM_W, ITEM_H, daily, FONT_MEDIUM,
+               done == MODE_COUNT ? COLOR_CORRECT : COLOR_KEY, focused == 0);
+    gfx_button(BOTTOM, ITEM_X, item_y(1), ITEM_W, ITEM_H, "Jogo livre", FONT_MEDIUM, COLOR_KEY,
+               focused == 1);
+    gfx_button(BOTTOM, ITEM_X, item_y(2), ITEM_W, ITEM_H, "Opções", FONT_MEDIUM, COLOR_KEY,
+               focused == 2);
+}
+
+static void draw_checkbox(int i, const char *label, bool checked)
+{
+    int y = item_y(i);
+    int box_x = ITEM_X + 8;
+    int box_y = y + (ITEM_H - CHECK_SIZE) / 2;
+
+    if (focused == i)
+        gfx_frame(BOTTOM, ITEM_X, y, ITEM_W, ITEM_H, 2, COLOR_TEXT);
+    gfx_rect(BOTTOM, box_x, box_y, CHECK_SIZE, CHECK_SIZE, checked ? COLOR_CORRECT : COLOR_KEY);
+    if (checked)
+        gfx_art(BOTTOM, box_x + 4, box_y + 6, check_icon, 8, 1, COLOR_TEXT);
+
+    int text_x = box_x + CHECK_SIZE + 10;
+    gfx_text(BOTTOM, text_x + gfx_text_width(label, FONT_MEDIUM) / 2,
+             y + (ITEM_H + fonts[FONT_MEDIUM].cap_height) / 2, label, FONT_MEDIUM, COLOR_TEXT);
 }
 
 static void draw(void)
 {
-    const char *labels[BUTTON_COUNT];
-
     gfx_clear(BOTTOM, COLOR_BG);
+
     if (page == PAGE_TITLE) {
         if (frame / BLINK_FRAMES % 2 == 0)
             gfx_text(BOTTOM, SCREEN_W / 2, 100, "Aperte START", FONT_LARGE, COLOR_TEXT);
-        return;
-    }
-
-    button_labels(labels);
-    for (int i = 0; i < BUTTON_COUNT; i++) {
-        gfx_button(BOTTOM, BUTTON_X, BUTTON_Y + i * BUTTON_STEP, BUTTON_W, BUTTON_H, labels[i],
-                   FONT_MEDIUM, COLOR_KEY, i == focused);
+    } else if (page == PAGE_MAIN) {
+        draw_main();
+    } else {
+        draw_checkbox(0, "Efeitos sonoros", sound_effects_on);
+        draw_checkbox(1, "Música", music_on);
+        gfx_button(BOTTOM, ITEM_X, item_y(2), ITEM_W, ITEM_H, "Voltar", FONT_MEDIUM, COLOR_KEY,
+                   focused == 2);
     }
 }
 
@@ -86,18 +131,18 @@ void menu_start(bool title)
     draw();
 }
 
-static enum menu_choice activate(int button)
+static enum menu_choice activate(int item)
 {
     if (page == PAGE_MAIN) {
-        if (button == 0)
+        if (item == 0)
             return MENU_DAILY;
-        if (button == 1)
+        if (item == 1)
             return MENU_FREE;
         page = PAGE_OPTIONS;
         focused = 0;
-    } else if (button == 0) {
+    } else if (item == 0) {
         sound_effects_on = !sound_effects_on;
-    } else if (button == 1) {
+    } else if (item == 1) {
         music_on = !music_on;
     } else {
         page = PAGE_MAIN;
@@ -106,15 +151,14 @@ static enum menu_choice activate(int button)
     return MENU_NONE;
 }
 
-static int button_hit(void)
+static int item_hit(void)
 {
     touchPosition touch;
 
     touchRead(&touch);
-    for (int i = 0; i < BUTTON_COUNT; i++) {
-        int y = BUTTON_Y + i * BUTTON_STEP;
-        if (touch.px >= BUTTON_X && touch.px < BUTTON_X + BUTTON_W && touch.py >= y &&
-            touch.py < y + BUTTON_H)
+    for (int i = 0; i < ITEM_COUNT; i++) {
+        if (touch.px >= ITEM_X && touch.px < ITEM_X + ITEM_W && touch.py >= item_y(i) &&
+            touch.py < item_y(i) + ITEM_H)
             return i;
     }
     return -1;
@@ -140,9 +184,9 @@ enum menu_choice menu_update(void)
         return MENU_NONE;
 
     if (down & KEY_UP)
-        focused = (focused + BUTTON_COUNT - 1) % BUTTON_COUNT;
+        focused = (focused + ITEM_COUNT - 1) % ITEM_COUNT;
     if (down & KEY_DOWN)
-        focused = (focused + 1) % BUTTON_COUNT;
+        focused = (focused + 1) % ITEM_COUNT;
     if (down & KEY_A)
         choice = activate(focused);
     if ((down & KEY_B) && page == PAGE_OPTIONS) {
@@ -150,10 +194,10 @@ enum menu_choice menu_update(void)
         focused = 2;
     }
     if (down & KEY_TOUCH) {
-        int button = button_hit();
-        if (button >= 0) {
-            focused = button;
-            choice = activate(button);
+        int item = item_hit();
+        if (item >= 0) {
+            focused = item;
+            choice = activate(item);
         }
     }
 
