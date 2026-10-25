@@ -34,7 +34,6 @@
 #define ITEM_Y 34
 #define PANEL_PAD 8
 
-static const int mode_boards[MODE_COUNT] = { 1, 2, 4 };
 static const char *const mode_names[MODE_COUNT] = { "Quina", "Duque", "Quadra" };
 
 struct session {

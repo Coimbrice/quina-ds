@@ -3,13 +3,6 @@
 
 #include <stdbool.h>
 
-enum mode {
-    MODE_QUINA,
-    MODE_DUQUE,
-    MODE_QUADRA,
-    MODE_COUNT,
-};
-
 // Opens the daily challenge or free play in the mode last played there, and
 // draws it. Each mode keeps its game until it's over.
 void play_open(bool daily);

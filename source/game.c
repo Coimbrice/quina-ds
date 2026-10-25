@@ -2,6 +2,8 @@
 
 #include "game.h"
 
+const int mode_boards[MODE_COUNT] = { 1, 2, 4 };
+
 void evaluate_guess(const char *guess, const char *answer, uint8_t hints[WORD_LEN])
 {
     int left[26] = { 0 };

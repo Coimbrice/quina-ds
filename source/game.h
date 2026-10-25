@@ -8,6 +8,13 @@
 #define MAX_BOARDS 4
 #define MAX_GUESSES 9
 
+enum mode {
+    MODE_QUINA,
+    MODE_DUQUE,
+    MODE_QUADRA,
+    MODE_COUNT,
+};
+
 // Ordered so that the best hint for a key is the highest value.
 enum hint {
     HINT_NONE,
@@ -25,6 +32,8 @@ struct game {
     char guesses[MAX_GUESSES][WORD_LEN];
     int8_t solved_at[MAX_BOARDS];
 };
+
+extern const int mode_boards[MODE_COUNT];
 
 void evaluate_guess(const char *guess, const char *answer, uint8_t hints[WORD_LEN]);
 
