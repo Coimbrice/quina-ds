@@ -279,9 +279,9 @@ static void handle_buttons(uint32_t down)
 
 static void change_mode(int m)
 {
-    gfx_fade_out();
+    gfx_fade_out(false);
     switch_mode(m);
-    gfx_fade_in();
+    gfx_fade_in(false);
 }
 
 // Returns true when the player picks "Sair".
@@ -456,9 +456,9 @@ bool play_update(void)
         // The timer only ever opens the stats, after a game ends.
         showing_stats = (down & KEY_SELECT) ? !showing_stats : true;
         stats_timer = 0;
-        gfx_fade_out();
+        gfx_fade_out(true);
         draw();
-        gfx_fade_in();
+        gfx_fade_in(true);
     } else if (game_over(&cur->game)) {
         if (!daily && (down & (KEY_A | KEY_TOUCH))) {
             new_game();

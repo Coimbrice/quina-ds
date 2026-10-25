@@ -29,9 +29,10 @@ enum color {
 void gfx_init(void);
 // Copies what was drawn to the screens. Call it right after the vblank.
 void gfx_present(void);
-// Fades both screens to black, or back from black showing what was drawn.
-void gfx_fade_out(void);
-void gfx_fade_in(void);
+// Fades to black, or back from black showing what was drawn. Either both
+// screens fade or only the top one.
+void gfx_fade_out(bool top_only);
+void gfx_fade_in(bool top_only);
 
 void gfx_clear(enum screen s, enum color color);
 // Limits drawing to a rectangle until gfx_unclip is called.

@@ -26,7 +26,7 @@ int main(void)
 
     setBrightness(3, -16);
     menu_start(true);
-    gfx_fade_in();
+    gfx_fade_in(false);
 
     while (1) {
         swiWaitForVBlank();
@@ -35,17 +35,17 @@ int main(void)
 
         if (playing) {
             if (play_update()) {
-                gfx_fade_out();
+                gfx_fade_out(false);
                 menu_start(false);
-                gfx_fade_in();
+                gfx_fade_in(false);
                 playing = false;
             }
         } else {
             enum menu_choice choice = menu_update();
             if (choice != MENU_NONE) {
-                gfx_fade_out();
+                gfx_fade_out(false);
                 play_open(choice == MENU_DAILY);
-                gfx_fade_in();
+                gfx_fade_in(false);
                 playing = true;
             }
         }

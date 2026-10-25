@@ -59,21 +59,22 @@ void gfx_present(void)
 
 #define FADE_FRAMES 10
 
-void gfx_fade_out(void)
+// The main engine shows on the top screen, which is brightness screen 1.
+void gfx_fade_out(bool top_only)
 {
     for (int i = 1; i <= FADE_FRAMES; i++) {
         swiWaitForVBlank();
-        setBrightness(3, -16 * i / FADE_FRAMES);
+        setBrightness(top_only ? 1 : 3, -16 * i / FADE_FRAMES);
     }
 }
 
-void gfx_fade_in(void)
+void gfx_fade_in(bool top_only)
 {
     swiWaitForVBlank();
     gfx_present();
     for (int i = FADE_FRAMES - 1; i >= 0; i--) {
         swiWaitForVBlank();
-        setBrightness(3, -16 * i / FADE_FRAMES);
+        setBrightness(top_only ? 1 : 3, -16 * i / FADE_FRAMES);
     }
 }
 
