@@ -63,7 +63,7 @@ bool save_read(const char *path, struct save *s)
 // Creates the folders leading to path, ignoring the ones that exist.
 static void make_folders(const char *path)
 {
-    char folder[64];
+    char folder[256];
 
     for (const char *p = strchr(path + 1, '/'); p; p = strchr(p + 1, '/')) {
         size_t length = p - path;
