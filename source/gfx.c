@@ -25,6 +25,7 @@ static const uint16_t palette[COLOR_COUNT] = {
 // Drawing happens in main RAM because VRAM can't take 8-bit writes.
 static uint8_t buffers[2][SCREEN_W * SCREEN_H] ALIGN(32);
 static int bg_ids[2];
+static bool changed[2];
 
 // Antialiased text needs colors between the text and whatever is under it.
 // They're added to the palette the first time each pair is drawn.
@@ -52,9 +53,13 @@ void gfx_init(void)
 
 void gfx_present(void)
 {
-    DC_FlushRange(buffers, sizeof(buffers));
-    dmaCopyWords(3, buffers[TOP], bgGetGfxPtr(bg_ids[TOP]), sizeof(buffers[TOP]));
-    dmaCopyWords(3, buffers[BOTTOM], bgGetGfxPtr(bg_ids[BOTTOM]), sizeof(buffers[BOTTOM]));
+    for (int s = 0; s < 2; s++) {
+        if (!changed[s])
+            continue;
+        DC_FlushRange(buffers[s], sizeof(buffers[s]));
+        dmaCopyWords(3, buffers[s], bgGetGfxPtr(bg_ids[s]), sizeof(buffers[s]));
+        changed[s] = false;
+    }
 }
 
 #define FADE_FRAMES 10
@@ -81,6 +86,7 @@ void gfx_fade_in(bool top_only)
 void gfx_clear(enum screen s, enum color color)
 {
     memset(buffers[s], color, sizeof(buffers[s]));
+    changed[s] = true;
 }
 
 static int clip_x0, clip_y0;
@@ -118,6 +124,7 @@ static void fill(enum screen s, int x, int y, int w, int h, enum color color)
 
     for (int row = y; row < y + h; row++)
         memset(&buffers[s][row * SCREEN_W + x], color, w);
+    changed[s] = true;
 }
 
 void gfx_rect(enum screen s, int x, int y, int w, int h, enum color color)
@@ -195,6 +202,7 @@ static void draw_glyph(enum screen s, int x, int y, const struct font *font, int
             if (level && px >= clip_x0 && px < clip_x1 && py >= clip_y0 && py < clip_y1) {
                 uint8_t *p = &buffers[s][py * SCREEN_W + px];
                 *p = shade(color, *p, level);
+                changed[s] = true;
             }
         }
     }
