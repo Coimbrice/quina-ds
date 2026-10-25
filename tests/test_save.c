@@ -84,6 +84,14 @@ static void test_stats(void)
     CHECK(st.streak == 1);
     CHECK(st.max_streak == 2);
     CHECK(st.last_day == 13);
+
+    memset(&st, 0, sizeof(st));
+    for (int i = 0; i < 1200; i++)
+        stats_record(&st, false, 0, true, 1);
+    CHECK(st.played == STATS_MAX);
+    CHECK(st.wins == STATS_MAX);
+    CHECK(st.max_streak == STATS_MAX);
+    CHECK(st.guesses[0] == STATS_MAX);
 }
 
 int main(void)

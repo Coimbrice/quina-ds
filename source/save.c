@@ -108,6 +108,13 @@ void save_commit(void)
         save_write(save_path, &save);
 }
 
+// Counts stop at 999 so they always fit on the stats screen.
+static void count(uint16_t *n)
+{
+    if (*n < STATS_MAX)
+        (*n)++;
+}
+
 void stats_record(struct stats *st, bool daily, int day, bool won, int guesses)
 {
     if (daily) {
@@ -116,13 +123,13 @@ void stats_record(struct stats *st, bool daily, int day, bool won, int guesses)
         st->last_day = day;
     }
 
-    st->played++;
+    count(&st->played);
     if (won) {
-        st->wins++;
-        st->streak++;
+        count(&st->wins);
+        count(&st->streak);
         if (st->streak > st->max_streak)
             st->max_streak = st->streak;
-        st->guesses[guesses - 1]++;
+        count(&st->guesses[guesses - 1]);
     } else {
         st->streak = 0;
     }

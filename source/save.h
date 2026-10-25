@@ -6,6 +6,8 @@
 
 #include "game.h"
 
+#define STATS_MAX 999
+
 struct stats {
     uint16_t played;
     uint16_t wins;
