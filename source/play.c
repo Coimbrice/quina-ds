@@ -168,6 +168,11 @@ int play_daily_done(void)
     return done;
 }
 
+void play_forget(void)
+{
+    memset(sessions, 0, sizeof(sessions));
+}
+
 static void type_letter(char c)
 {
     cur->typed[cur->cursor] = c;

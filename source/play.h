@@ -11,5 +11,7 @@ void play_open(bool daily);
 bool play_update(void);
 // How many of today's daily challenges are over.
 int play_daily_done(void);
+// Drops what's kept in memory after the save was cleared.
+void play_forget(void);
 
 #endif
