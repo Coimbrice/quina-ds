@@ -1,0 +1,101 @@
+#include <stdio.h>
+#include <string.h>
+
+#include "save.h"
+
+static int failures;
+
+#define CHECK(cond)                                                                                \
+    do {                                                                                           \
+        if (!(cond)) {                                                                             \
+            printf("%s:%d: check failed: %s\n", __FILE__, __LINE__, #cond);                        \
+            failures++;                                                                            \
+        }                                                                                          \
+    } while (0)
+
+static const char *path = "build/test/data/quina/save.dat";
+
+static void test_round_trip(void)
+{
+    struct save written;
+    struct save read;
+
+    save_defaults(&written);
+    written.music = 0;
+    written.last_mode[1] = MODE_QUADRA;
+    written.stats[1][MODE_DUQUE].wins = 12;
+    written.games[0][MODE_QUINA].started = 1;
+    memcpy(written.games[0][MODE_QUINA].guesses[0], "carta", WORD_LEN);
+
+    CHECK(save_write(path, &written));
+    CHECK(save_read(path, &read));
+    CHECK(memcmp(&written, &read, sizeof(read)) == 0);
+}
+
+static void test_bad_files(void)
+{
+    struct save defaults;
+    struct save read;
+    FILE *f;
+
+    save_defaults(&defaults);
+
+    CHECK(!save_read("build/test/missing.dat", &read));
+    CHECK(memcmp(&read, &defaults, sizeof(read)) == 0);
+
+    // Flip one byte of the data.
+    save_write(path, &defaults);
+    f = fopen(path, "r+b");
+    fseek(f, -1, SEEK_END);
+    fputc(0x55, f);
+    fclose(f);
+    read.music = 0;
+    CHECK(!save_read(path, &read));
+    CHECK(memcmp(&read, &defaults, sizeof(read)) == 0);
+
+    // Cut the file short.
+    f = fopen(path, "wb");
+    fputs("QUIN", f);
+    fclose(f);
+    CHECK(!save_read(path, &read));
+}
+
+static void test_stats(void)
+{
+    struct stats st = { 0 };
+
+    stats_record(&st, false, 0, true, 3);
+    stats_record(&st, false, 0, true, 4);
+    stats_record(&st, false, 0, false, 6);
+    stats_record(&st, false, 0, true, 3);
+    CHECK(st.played == 4);
+    CHECK(st.wins == 3);
+    CHECK(st.streak == 1);
+    CHECK(st.max_streak == 2);
+    CHECK(st.guesses[2] == 2);
+    CHECK(st.guesses[3] == 1);
+
+    // Skipping a day breaks the daily streak even after a win.
+    memset(&st, 0, sizeof(st));
+    stats_record(&st, true, 10, true, 2);
+    stats_record(&st, true, 11, true, 2);
+    CHECK(st.streak == 2);
+    stats_record(&st, true, 13, true, 2);
+    CHECK(st.streak == 1);
+    CHECK(st.max_streak == 2);
+    CHECK(st.last_day == 13);
+}
+
+int main(void)
+{
+    test_round_trip();
+    test_bad_files();
+    test_stats();
+
+    if (failures > 0) {
+        printf("%d failure(s)\n", failures);
+        return 1;
+    }
+    printf("All save tests passed.\n");
+    return 0;
+}
