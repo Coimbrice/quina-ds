@@ -4,14 +4,13 @@
 #include "gfx.h"
 #include "keyboard.h"
 
-// The bottom row has one more slot than the others, so it's shifted half a
-// key to the left, like on a real keyboard. ENTER takes two slots.
+// Every row has ten keys of the same size.
 #define KEY_Y 70
-#define KEY_W 21
+#define KEY_W 23
 #define KEY_H 34
-#define KEY_STEP_X 23
+#define KEY_STEP_X 25
 #define KEY_STEP_Y 38
-#define ENTER_SLOTS 2
+#define KEYS_PER_ROW 10
 
 #define MAX_KEYS 30
 
@@ -42,6 +41,20 @@ static const char *const erase_icon[] = {
 };
 // clang-format on
 
+// clang-format off
+static const char *const enter_icon[] = {
+    "..........##",
+    "..........##",
+    "...#......##",
+    "..##......##",
+    ".###########",
+    "############",
+    ".###########",
+    "..##........",
+    "...#........",
+};
+// clang-format on
+
 static const char *const left_icon[] = {
     "....#", "...##", "..###", ".####", "#####", ".####", "..###", "...##", "....#",
 };
@@ -58,19 +71,14 @@ void keyboard_init(void)
 {
     key_count = 0;
     for (int row = 0; row < 3; row++) {
-        int slots = 0;
-        for (const char *c = rows[row]; *c; c++)
-            slots += *c == KB_ENTER ? ENTER_SLOTS : 1;
-
-        int x = (SCREEN_W - slots * KEY_STEP_X + (KEY_STEP_X - KEY_W)) / 2;
+        int x = (SCREEN_W - KEYS_PER_ROW * KEY_STEP_X + (KEY_STEP_X - KEY_W)) / 2;
         for (const char *c = rows[row]; *c; c++) {
             struct key *k = &keys[key_count++];
-            int span = *c == KB_ENTER ? ENTER_SLOTS : 1;
             k->c = *c;
             k->row = row;
             k->x = x;
-            k->w = span * KEY_STEP_X - (KEY_STEP_X - KEY_W);
-            x += span * KEY_STEP_X;
+            k->w = KEY_W;
+            x += KEY_STEP_X;
         }
     }
     wanted_x = keys[0].x;
@@ -131,8 +139,7 @@ static void draw_key(const struct game *g, int k, bool focused)
 
     switch (key->c) {
     case KB_ENTER:
-        gfx_text(BOTTOM, key->x + key->w / 2, y + (KEY_H + fonts[FONT_SMALL].cap_height) / 2,
-                 "ENTER", FONT_SMALL, text);
+        draw_icon(k, enter_icon, 9, 1, text);
         break;
     case KB_ERASE:
         draw_icon(k, erase_icon, 9, 1, text);
