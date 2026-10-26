@@ -14,7 +14,10 @@ void draw_tile(enum screen s, int x, int y, int w, int h, enum font_size size, i
                enum color fill, bool outlined, bool cursor);
 
 // Draws the boards on the top screen. typed holds the letters of the
-// current guess, 0 where empty.
-void board_draw(const struct game *g, const char typed[WORD_LEN], int cursor);
+// current guess, 0 where empty. reveal counts the frames since the last
+// guess was sent while its tiles are flipping, and is -1 otherwise.
+void board_draw(const struct game *g, const char typed[WORD_LEN], int cursor, int reveal);
+// How long the flip of a new guess takes.
+int board_reveal_frames(void);
 
 #endif

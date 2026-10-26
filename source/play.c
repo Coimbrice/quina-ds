@@ -59,6 +59,9 @@ static struct session *cur;
 static struct saved_game *saved;
 static bool showing_stats;
 static int stats_timer;
+// While a new guess is being revealed, the keyboard keeps its old colors.
+static int reveal = -1;
+static struct game before_guess;
 static bool focus_keys;
 static int focused_key;
 static const char *message;
@@ -142,6 +145,7 @@ static void switch_mode(int m)
     menu_open = false;
     showing_stats = false;
     stats_timer = 0;
+    reveal = -1;
     draw();
 }
 
@@ -209,7 +213,9 @@ static void submit(void)
     }
 
     memcpy(saved->guesses[saved->num_guesses++], word_text(index), WORD_LEN);
+    before_guess = cur->game;
     game_guess(&cur->game, word_text(index));
+    reveal = 0;
     memset(cur->typed, 0, sizeof(cur->typed));
     cur->cursor = 0;
     message = NULL;
@@ -448,7 +454,8 @@ static void draw_menu(void)
 
 static void draw(void)
 {
-    bool over = game_over(&cur->game);
+    // The result only shows once the last guess is revealed.
+    bool over = game_over(&cur->game) && reveal < 0;
 
     if (showing_stats) {
         char title[32];
@@ -460,7 +467,7 @@ static void draw(void)
         strcat(title, daily ? ", desafio diário" : ", jogo livre");
         stats_draw(&save.stats[daily][mode], title, cur->game.max_guesses, last);
     } else {
-        board_draw(&cur->game, cur->typed, cur->cursor);
+        board_draw(&cur->game, cur->typed, cur->cursor, reveal);
     }
 
     gfx_clear(BOTTOM, COLOR_BG);
@@ -471,7 +478,8 @@ static void draw(void)
         draw_prompt();
     if (message)
         gfx_text(BOTTOM, SCREEN_W / 2, MESSAGE_Y, message, FONT_MEDIUM, COLOR_TEXT);
-    keyboard_draw(&cur->game, focus_keys && !over && !menu_open ? focused_key : -1);
+    keyboard_draw(reveal >= 0 ? &before_guess : &cur->game,
+                  focus_keys && !over && !menu_open ? focused_key : -1);
     if (menu_open)
         draw_menu();
 }
@@ -484,6 +492,15 @@ bool play_update(void)
 
     if (down & KEY_TOUCH)
         touchRead(&touch);
+
+    // Input waits until the new guess is revealed.
+    if (reveal >= 0) {
+        if (++reveal == board_reveal_frames())
+            reveal = -1;
+        keyboard_animate();
+        draw();
+        return false;
+    }
 
     if (daily && !menu_open) {
         char text[sizeof(countdown)];

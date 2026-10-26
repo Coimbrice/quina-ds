@@ -9,6 +9,11 @@ struct layout {
     enum font_size font;
 };
 
+// Tiles of a new guess flip one after the other: each one shrinks to a line
+// and grows back showing its hint.
+#define FLIP_FRAMES 12
+#define FLIP_STEP 8
+
 // Indexed by number of boards. Everything must fit in 256x192.
 static const struct layout layouts[MAX_BOARDS + 1] = {
     [1] = { 28, 28, 3, 0, FONT_LARGE },
@@ -46,8 +51,39 @@ void draw_tile(enum screen s, int x, int y, int w, int h, enum font_size size, i
         gfx_letter(s, x + w / 2, y + h / 2, c, size, COLOR_TEXT);
 }
 
+int board_reveal_frames(void)
+{
+    return (WORD_LEN - 1) * FLIP_STEP + FLIP_FRAMES;
+}
+
+// Draws a tile of the row being revealed, reveal frames after it was sent.
+static void draw_flip(const struct layout *l, int x, int y, int reveal, int i, int plain, int shown,
+                      enum color fill)
+{
+    int t = reveal - i * FLIP_STEP;
+    int half = FLIP_FRAMES / 2;
+    bool flipped = t >= half;
+    int h = l->tile_h;
+
+    if (t < 0) {
+        draw_tile(TOP, x, y, l->tile_w, h, l->font, plain, COLOR_BG, true, false);
+        return;
+    }
+    if (t < FLIP_FRAMES)
+        h = l->tile_h * (flipped ? t - half : half - t) / half;
+    if (h <= 0)
+        return;
+
+    gfx_clip(x, y + (l->tile_h - h) / 2, l->tile_w, h);
+    if (flipped)
+        draw_tile(TOP, x, y, l->tile_w, l->tile_h, l->font, shown, fill, false, false);
+    else
+        draw_tile(TOP, x, y, l->tile_w, l->tile_h, l->font, plain, COLOR_BG, true, false);
+    gfx_unclip();
+}
+
 static void draw_row(const struct game *g, const struct layout *l, int board, int row, int x, int y,
-                     const char typed[WORD_LEN], int cursor)
+                     const char typed[WORD_LEN], int cursor, int reveal)
 {
     uint8_t hints[WORD_LEN];
     char text[WORD_LEN];
@@ -60,7 +96,10 @@ static void draw_row(const struct game *g, const struct layout *l, int board, in
 
     for (int i = 0; i < WORD_LEN; i++) {
         int tx = x + i * (l->tile_w + l->gap);
-        if (row < game_rows(g, board))
+        if (reveal >= 0 && row == g->num_guesses - 1 && row < game_rows(g, board))
+            draw_flip(l, tx, y, reveal, i, g->guesses[row][i], (unsigned char)text[i],
+                      hint_color(hints[i]));
+        else if (row < game_rows(g, board))
             draw_tile(TOP, tx, y, l->tile_w, l->tile_h, l->font, (unsigned char)text[i],
                       hint_color(hints[i]), false, false);
         else if (typing)
@@ -71,7 +110,7 @@ static void draw_row(const struct game *g, const struct layout *l, int board, in
     }
 }
 
-void board_draw(const struct game *g, const char typed[WORD_LEN], int cursor)
+void board_draw(const struct game *g, const char typed[WORD_LEN], int cursor, int reveal)
 {
     const struct layout *l = &layouts[g->num_boards];
     int board_w = WORD_LEN * l->tile_w + (WORD_LEN - 1) * l->gap;
@@ -84,6 +123,6 @@ void board_draw(const struct game *g, const char typed[WORD_LEN], int cursor)
     for (int b = 0; b < g->num_boards; b++) {
         int bx = x + b * (board_w + l->board_gap);
         for (int row = 0; row < g->max_guesses; row++)
-            draw_row(g, l, b, row, bx, y + row * (l->tile_h + l->gap), typed, cursor);
+            draw_row(g, l, b, row, bx, y + row * (l->tile_h + l->gap), typed, cursor, reveal);
     }
 }
