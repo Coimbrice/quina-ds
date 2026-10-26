@@ -33,6 +33,7 @@
 #define CHECK_SIZE 20
 
 #define BLINK_FRAMES 40
+#define PRESS_FRAMES 6
 
 enum page {
     PAGE_TITLE,
@@ -71,6 +72,8 @@ static const char *const check_icon[] = {
 static enum page page;
 static int focused;
 static int frame;
+static int pressed = -1;
+static int press_timer;
 static bool stats_daily = true;
 static int stats_mode;
 
@@ -88,6 +91,12 @@ static void draw_logo(void)
     }
     gfx_text(TOP, SCREEN_W / 2, LOGO_Y + LOGO_TILE + 30, "Jogo de palavras", FONT_MEDIUM,
              COLOR_DIM_TEXT);
+}
+
+// Look of an item's button: focused, and sunk while it's being pressed.
+static int state(int i)
+{
+    return (focused == i ? BUTTON_FOCUSED : 0) | (pressed == i ? BUTTON_PRESSED : 0);
 }
 
 static int item_count(void)
@@ -131,9 +140,9 @@ static void draw_erase(void)
     gfx_text(BOTTOM, SCREEN_W / 2, DIALOG_Y + 24, "Apagar estatísticas", FONT_MEDIUM, COLOR_TEXT);
     gfx_text(BOTTOM, SCREEN_W / 2, DIALOG_Y + 42, "e partidas salvas?", FONT_MEDIUM, COLOR_TEXT);
     gfx_button(BOTTOM, choice_x(0), CHOICE_Y, CHOICE_W, CHOICE_H, "Não", FONT_MEDIUM, COLOR_KEY,
-               focused == 0);
+               state(0));
     gfx_button(BOTTOM, choice_x(1), CHOICE_Y, CHOICE_W, CHOICE_H, "Sim", FONT_MEDIUM, COLOR_KEY,
-               focused == 1);
+               state(1));
 }
 
 static void draw_stats_page(void)
@@ -145,15 +154,16 @@ static void draw_stats_page(void)
         stats_button(0, i, &x, &w);
         gfx_button(BOTTOM, x, item_y(0), w, ITEM_H, kinds[i], FONT_MEDIUM,
                    stats_daily == (i == 0) ? COLOR_CORRECT : COLOR_KEY,
-                   focused == 0 && stats_daily == (i == 0));
+                   focused == 0 && stats_daily == (i == 0) ? BUTTON_FOCUSED : 0);
     }
     for (int m = 0; m < MODE_COUNT; m++) {
         stats_button(1, m, &x, &w);
         gfx_button(BOTTOM, x, item_y(1), w, ITEM_H, mode_names[m], FONT_MEDIUM,
-                   stats_mode == m ? COLOR_CORRECT : COLOR_KEY, focused == 1 && stats_mode == m);
+                   stats_mode == m ? COLOR_CORRECT : COLOR_KEY,
+                   focused == 1 && stats_mode == m ? BUTTON_FOCUSED : 0);
     }
     gfx_button(BOTTOM, ITEM_X, item_y(2), ITEM_W, ITEM_H, "Voltar", FONT_MEDIUM, COLOR_KEY,
-               focused == 2);
+               state(2));
 }
 
 static void draw_credits(void)
@@ -162,7 +172,8 @@ static void draw_credits(void)
         gfx_text(BOTTOM, SCREEN_W / 2, CREDITS_Y + i * CREDITS_STEP, credits[i],
                  i == 0 ? FONT_MEDIUM : FONT_SMALL, i == 0 ? COLOR_TEXT : COLOR_DIM_TEXT);
     }
-    gfx_button(BOTTOM, ITEM_X, item_y(0), ITEM_W, ITEM_H, "Voltar", FONT_MEDIUM, COLOR_KEY, true);
+    gfx_button(BOTTOM, ITEM_X, item_y(0), ITEM_W, ITEM_H, "Voltar", FONT_MEDIUM, COLOR_KEY,
+               state(0));
 }
 
 static void draw_main(void)
@@ -177,20 +188,20 @@ static void draw_main(void)
         snprintf(daily, sizeof(daily), "Desafio diário");
 
     gfx_button(BOTTOM, ITEM_X, item_y(0), ITEM_W, ITEM_H, daily, FONT_MEDIUM,
-               done == MODE_COUNT ? COLOR_CORRECT : COLOR_KEY, focused == 0);
+               done == MODE_COUNT ? COLOR_CORRECT : COLOR_KEY, state(0));
     gfx_button(BOTTOM, ITEM_X, item_y(1), ITEM_W, ITEM_H, "Jogo livre", FONT_MEDIUM, COLOR_KEY,
-               focused == 1);
+               state(1));
     gfx_button(BOTTOM, ITEM_X, item_y(2), ITEM_W, ITEM_H, "Estatísticas", FONT_MEDIUM, COLOR_KEY,
-               focused == 2);
+               state(2));
     gfx_button(BOTTOM, ITEM_X, item_y(3), ITEM_W, ITEM_H, "Opções", FONT_MEDIUM, COLOR_KEY,
-               focused == 3);
+               state(3));
     gfx_button(BOTTOM, ITEM_X, item_y(4), ITEM_W, ITEM_H, "Créditos", FONT_MEDIUM, COLOR_KEY,
-               focused == 4);
+               state(4));
 }
 
 static void draw_checkbox(int i, const char *label, bool checked)
 {
-    int y = item_y(i);
+    int y = item_y(i) + (pressed == i ? 2 : 0);
     int box_x = ITEM_X + 8;
     int box_y = y + (ITEM_H - CHECK_SIZE) / 2;
 
@@ -218,9 +229,9 @@ static void draw(void)
         draw_checkbox(0, "Efeitos sonoros", save.sound_effects);
         draw_checkbox(1, "Música", save.music);
         gfx_button(BOTTOM, ITEM_X, item_y(2), ITEM_W, ITEM_H, "Apagar dados", FONT_MEDIUM,
-                   COLOR_KEY, focused == 2);
+                   COLOR_KEY, state(2));
         gfx_button(BOTTOM, ITEM_X, item_y(3), ITEM_W, ITEM_H, "Voltar", FONT_MEDIUM, COLOR_KEY,
-                   focused == 3);
+                   state(3));
     } else if (page == PAGE_ERASE) {
         draw_erase();
     } else if (page == PAGE_STATS) {
@@ -333,22 +344,28 @@ static enum menu_choice activate(int item)
     return MENU_NONE;
 }
 
+// The action of an item happens once its button is done sinking.
+static void press(int item)
+{
+    focused = item;
+    pressed = item;
+    press_timer = PRESS_FRAMES;
+}
+
 static bool inside(const touchPosition *t, int x, int y, int w, int h)
 {
     return t->px >= x && t->px < x + w && t->py >= y && t->py < y + h;
 }
 
-static enum menu_choice touch_item(void)
+static void touch_item(void)
 {
     touchPosition touch;
 
     touchRead(&touch);
     for (int i = 0; i < item_count(); i++) {
         if (page == PAGE_ERASE) {
-            if (inside(&touch, choice_x(i), CHOICE_Y, CHOICE_W, CHOICE_H)) {
-                focused = i;
-                return activate(i);
-            }
+            if (inside(&touch, choice_x(i), CHOICE_Y, CHOICE_W, CHOICE_H))
+                press(i);
         } else if (page == PAGE_STATS && i < 2) {
             for (int c = 0; c < stats_choices(i); c++) {
                 int x, w;
@@ -359,11 +376,9 @@ static enum menu_choice touch_item(void)
                 }
             }
         } else if (inside(&touch, ITEM_X, item_y(i), ITEM_W, ITEM_H)) {
-            focused = i;
-            return activate(i);
+            press(i);
         }
     }
-    return MENU_NONE;
 }
 
 enum menu_choice menu_update(void)
@@ -380,6 +395,16 @@ enum menu_choice menu_update(void)
             draw();
         }
         return MENU_NONE;
+    }
+
+    if (press_timer) {
+        if (--press_timer == 0) {
+            int item = pressed;
+            pressed = -1;
+            choice = activate(item);
+            draw();
+        }
+        return choice;
     }
 
     if (!down)
@@ -399,11 +424,11 @@ enum menu_choice menu_update(void)
         pick_stats(focused, (current + ((down & KEY_LEFT) ? n - 1 : 1)) % n);
     }
     if (down & KEY_A)
-        choice = activate(focused);
+        press(focused);
     if (down & KEY_B)
         back();
     if (down & KEY_TOUCH)
-        choice = touch_item();
+        touch_item();
 
     draw();
     return choice;

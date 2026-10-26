@@ -261,10 +261,14 @@ void gfx_text(enum screen s, int x, int y, const char *text, enum font_size size
 }
 
 void gfx_button(enum screen s, int x, int y, int w, int h, const char *text, enum font_size size,
-                enum color fill, bool focused)
+                enum color fill, int flags)
 {
+    if (flags & BUTTON_PRESSED) {
+        y += 2;
+        h -= 2;
+    }
     gfx_rect(s, x, y, w, h, fill);
-    if (focused)
+    if (flags & BUTTON_FOCUSED)
         gfx_frame(s, x, y, w, h, 2, COLOR_TEXT);
     gfx_text(s, x + w / 2, y + (h + fonts[size].cap_height) / 2, text, size, COLOR_TEXT);
 }

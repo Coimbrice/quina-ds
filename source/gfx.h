@@ -54,8 +54,12 @@ void gfx_letter(enum screen s, int x, int y, int c, enum font_size size, enum co
 void gfx_text(enum screen s, int x, int y, const char *text, enum font_size size, enum color color);
 int gfx_text_width(const char *text, enum font_size size);
 
-// A box with a centered label, outlined when focused.
+#define BUTTON_FOCUSED 1
+#define BUTTON_PRESSED 2
+
+// A box with a centered label. flags can make it outlined as focused or
+// sunk as pressed.
 void gfx_button(enum screen s, int x, int y, int w, int h, const char *text, enum font_size size,
-                enum color fill, bool focused);
+                enum color fill, int flags);
 
 #endif

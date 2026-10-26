@@ -38,6 +38,9 @@
 #define ITEM_STEP 27
 #define ITEM_Y 34
 #define PANEL_PAD 8
+// Pressing the header's menu button sinks it like the items.
+#define PRESS_HEADER ITEM_COUNT
+#define PRESS_FRAMES 6
 
 // The games themselves are kept in the save. Sessions also remember what
 // was being typed while the player is in another mode.
@@ -66,6 +69,8 @@ static const char *message;
 static int message_timer;
 static bool menu_open;
 static int menu_focus;
+static int pressing = -1;
+static int press_timer;
 static bool dirty;
 
 static const char restart_message[] = "START de novo para recomeçar";
@@ -328,12 +333,20 @@ static bool choose_item(int item)
     return false;
 }
 
-static bool handle_menu(uint32_t down, int x, int y)
+static void start_press(int item)
+{
+    pressing = item;
+    press_timer = PRESS_FRAMES;
+}
+
+static void handle_menu(uint32_t down, int x, int y)
 {
     if (down & KEY_TOUCH) {
         for (int i = 0; i < ITEM_COUNT; i++) {
-            if (inside(x, y, ITEM_X, ITEM_Y + i * ITEM_STEP, ITEM_W, ITEM_H))
-                return choose_item(i);
+            if (inside(x, y, ITEM_X, ITEM_Y + i * ITEM_STEP, ITEM_W, ITEM_H)) {
+                menu_focus = i;
+                start_press(i);
+            }
         }
     }
     if (down & KEY_UP)
@@ -341,9 +354,22 @@ static bool handle_menu(uint32_t down, int x, int y)
     if (down & KEY_DOWN)
         menu_focus = (menu_focus + 1) % ITEM_COUNT;
     if (down & KEY_A)
-        return choose_item(menu_focus);
+        start_press(menu_focus);
     if (down & (KEY_B | KEY_START))
         menu_open = false;
+}
+
+// Runs what was pressed once the button is done sinking. Returns true when
+// it was "Sair".
+static bool finish_press(void)
+{
+    int item = pressing;
+
+    pressing = -1;
+    if (item != PRESS_HEADER)
+        return choose_item(item);
+    menu_open = true;
+    menu_focus = mode;
     return false;
 }
 
@@ -354,7 +380,8 @@ static void draw_header(void)
     int name_w = gfx_text_width(name, FONT_MEDIUM);
     int baseline = HEADER_Y + (HEADER_H + fonts[FONT_MEDIUM].cap_height) / 2;
 
-    gfx_button(BOTTOM, MENU_X, HEADER_Y, MENU_W, HEADER_H, "Menu", FONT_SMALL, COLOR_KEY, false);
+    gfx_button(BOTTOM, MENU_X, HEADER_Y, MENU_W, HEADER_H, "Menu", FONT_SMALL, COLOR_KEY,
+               pressing == PRESS_HEADER ? BUTTON_PRESSED : 0);
     gfx_text(BOTTOM, SCREEN_W - 6 - name_w / 2, baseline, name, FONT_MEDIUM, COLOR_TEXT);
     gfx_text(BOTTOM, SCREEN_W - 12 - name_w - gfx_text_width(kind, FONT_SMALL) / 2, baseline, kind,
              FONT_SMALL, COLOR_DIM_TEXT);
@@ -446,7 +473,7 @@ static void draw_menu(void)
         const char *label = i < MODE_COUNT ? mode_names[i] : i == ITEM_QUIT ? "Sair" : "Cancelar";
         enum color fill = i == mode ? COLOR_CORRECT : COLOR_KEY;
         gfx_button(BOTTOM, ITEM_X, ITEM_Y + i * ITEM_STEP, ITEM_W, ITEM_H, label, FONT_MEDIUM, fill,
-                   i == menu_focus);
+                   (i == menu_focus ? BUTTON_FOCUSED : 0) | (i == pressing ? BUTTON_PRESSED : 0));
     }
 }
 
@@ -508,13 +535,18 @@ bool play_update(void)
         dirty |= game_over(&cur->game) && strcmp(text, countdown) != 0;
     }
 
-    if (menu_open) {
-        if (handle_menu(down, touch.px, touch.py))
+    if (press_timer) {
+        if (--press_timer == 0 && finish_press())
             return true;
+        dirty = true;
+    } else if (menu_open) {
+        handle_menu(down, touch.px, touch.py);
         dirty |= down != 0;
-    } else if ((down & KEY_X) || (daily && (down & KEY_START)) ||
-               ((down & KEY_TOUCH) &&
-                inside(touch.px, touch.py, MENU_X, HEADER_Y, MENU_W, HEADER_H))) {
+    } else if ((down & KEY_TOUCH) &&
+               inside(touch.px, touch.py, MENU_X, HEADER_Y, MENU_W, HEADER_H)) {
+        start_press(PRESS_HEADER);
+        dirty = true;
+    } else if ((down & KEY_X) || (daily && (down & KEY_START))) {
         menu_open = true;
         menu_focus = mode;
         dirty = true;
