@@ -3,6 +3,7 @@
 #include "game.h"
 
 const int mode_boards[MODE_COUNT] = { 1, 2, 4 };
+const char *const mode_names[MODE_COUNT] = { "Quina", "Duque", "Quadra" };
 
 void evaluate_guess(const char *guess, const char *answer, uint8_t hints[WORD_LEN])
 {
@@ -26,12 +27,17 @@ void evaluate_guess(const char *guess, const char *answer, uint8_t hints[WORD_LE
     }
 }
 
+int game_max_guesses(int num_boards)
+{
+    // 1, 2 and 4 boards get 6, 7 and 9 guesses.
+    return num_boards + 5;
+}
+
 void game_start(struct game *g, int num_boards, const char answers[][WORD_LEN])
 {
     memset(g, 0, sizeof(*g));
     g->num_boards = num_boards;
-    // 1, 2 and 4 boards get 6, 7 and 9 guesses.
-    g->max_guesses = num_boards + 5;
+    g->max_guesses = game_max_guesses(num_boards);
     for (int b = 0; b < num_boards; b++) {
         memcpy(g->answers[b], answers[b], WORD_LEN);
         g->solved_at[b] = -1;

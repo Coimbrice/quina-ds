@@ -1,4 +1,5 @@
 #include <stdio.h>
+#include <string.h>
 
 #include "gfx.h"
 #include "stats.h"
@@ -34,9 +35,12 @@ static void draw_bar(int row, int rows, const char *label, int count, int most, 
     gfx_text(TOP, BAR_X + w - 8, baseline, text, FONT_SMALL, COLOR_TEXT);
 }
 
-void stats_draw(const struct stats *st, const char *title, int max_guesses, int last)
+void stats_draw(bool daily, int mode, int last)
 {
+    const struct stats *st = &save.stats[daily][mode];
+    int max_guesses = game_max_guesses(mode_boards[mode]);
     int losses = st->played - st->wins;
+    char title[32];
     int most = losses;
     char label[4];
 
@@ -44,6 +48,9 @@ void stats_draw(const struct stats *st, const char *title, int max_guesses, int 
         if (st->guesses[i] > most)
             most = st->guesses[i];
     }
+
+    strcpy(title, mode_names[mode]);
+    strcat(title, daily ? ", desafio diário" : ", jogo livre");
 
     gfx_clear(TOP, COLOR_BG);
     gfx_text(TOP, SCREEN_W / 2, 18, title, FONT_MEDIUM, COLOR_TEXT);

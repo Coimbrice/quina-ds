@@ -39,8 +39,6 @@
 #define ITEM_Y 34
 #define PANEL_PAD 8
 
-static const char *const mode_names[MODE_COUNT] = { "Quina", "Duque", "Quadra" };
-
 // The games themselves are kept in the save. Sessions also remember what
 // was being typed while the player is in another mode.
 struct session {
@@ -458,14 +456,10 @@ static void draw(void)
     bool over = game_over(&cur->game) && reveal < 0;
 
     if (showing_stats) {
-        char title[32];
         int last = -1;
-
         if (over)
             last = game_won(&cur->game) ? cur->game.num_guesses : 0;
-        strcpy(title, mode_names[mode]);
-        strcat(title, daily ? ", desafio diário" : ", jogo livre");
-        stats_draw(&save.stats[daily][mode], title, cur->game.max_guesses, last);
+        stats_draw(daily, mode, last);
     } else {
         board_draw(&cur->game, cur->typed, cur->cursor, reveal);
     }

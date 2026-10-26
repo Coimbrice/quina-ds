@@ -34,9 +34,11 @@ struct game {
 };
 
 extern const int mode_boards[MODE_COUNT];
+extern const char *const mode_names[MODE_COUNT];
 
 void evaluate_guess(const char *guess, const char *answer, uint8_t hints[WORD_LEN]);
 
+int game_max_guesses(int num_boards);
 void game_start(struct game *g, int num_boards, const char answers[][WORD_LEN]);
 void game_guess(struct game *g, const char *guess);
 bool game_won(const struct game *g);
