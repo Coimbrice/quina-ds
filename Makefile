@@ -4,6 +4,7 @@ NAME		:= quina
 GAME_TITLE	:= Quina
 GAME_SUBTITLE	:= Jogo de palavras
 GAME_AUTHOR	:= Coimbrice
+GAME_ICON	:= icon.png
 
 INCLUDEDIRS	:= source
 SOURCES_C	:= build/words.c
