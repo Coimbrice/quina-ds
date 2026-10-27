@@ -2,6 +2,7 @@
 #define GFX_H
 
 #include <stdbool.h>
+#include <stdint.h>
 
 #include "font.h"
 
@@ -33,6 +34,10 @@ void gfx_present(void);
 // screens fade or only the top one.
 void gfx_fade_out(bool top_only);
 void gfx_fade_in(bool top_only);
+
+// Copies a 64x64 area into the graphics of an 8bpp sprite. Pixels with the
+// background color become transparent.
+void gfx_capture(enum screen s, int x, int y, uint16_t *sprite);
 
 void gfx_clear(enum screen s, enum color color);
 // Limits drawing to a rectangle until gfx_unclip is called.

@@ -28,7 +28,9 @@ static int bg_ids[2];
 static bool changed[2];
 
 // Antialiased text needs colors between the text and whatever is under it.
-// They're added to the palette the first time each pair is drawn.
+// They're added to the palette the first time each pair is drawn. The top
+// screen's sprites share the same palette, so pixels copied into them keep
+// their colors.
 static uint16_t colors[256];
 static int color_count;
 static uint8_t shades[COLOR_COUNT][256][2];
@@ -38,7 +40,9 @@ void gfx_init(void)
     videoSetMode(MODE_5_2D);
     videoSetModeSub(MODE_5_2D);
     vramSetBankA(VRAM_A_MAIN_BG);
+    vramSetBankB(VRAM_B_MAIN_SPRITE);
     vramSetBankC(VRAM_C_SUB_BG);
+    oamInit(&oamMain, SpriteMapping_1D_128, false);
 
     bg_ids[TOP] = bgInit(3, BgType_Bmp8, BgSize_B8_256x256, 0, 0);
     bg_ids[BOTTOM] = bgInitSub(3, BgType_Bmp8, BgSize_B8_256x256, 0, 0);
@@ -47,12 +51,14 @@ void gfx_init(void)
         colors[i] = palette[i];
         BG_PALETTE[i] = palette[i];
         BG_PALETTE_SUB[i] = palette[i];
+        SPRITE_PALETTE[i] = palette[i];
     }
     color_count = COLOR_COUNT;
 }
 
 void gfx_present(void)
 {
+    oamUpdate(&oamMain);
     for (int s = 0; s < 2; s++) {
         if (!changed[s])
             continue;
@@ -81,6 +87,24 @@ void gfx_fade_in(bool top_only)
         swiWaitForVBlank();
         setBrightness(top_only ? 1 : 3, -16 * i / FADE_FRAMES);
     }
+}
+
+void gfx_capture(enum screen s, int x, int y, uint16_t *sprite)
+{
+    static uint8_t tiles[64 * 64] ALIGN(4);
+    uint8_t *p = tiles;
+
+    // 8bpp sprites are made of 8x8 tiles, each stored row by row.
+    for (int ty = 0; ty < 64; ty += 8) {
+        for (int tx = 0; tx < 64; tx += 8) {
+            for (int row = 0; row < 8; row++) {
+                memcpy(p, &buffers[s][(y + ty + row) * SCREEN_W + x + tx], 8);
+                p += 8;
+            }
+        }
+    }
+    DC_FlushRange(tiles, sizeof(tiles));
+    dmaCopy(tiles, sprite, sizeof(tiles));
 }
 
 void gfx_clear(enum screen s, enum color color)
@@ -181,6 +205,7 @@ static int shade(enum color fg, int bg, int level)
         colors[color_count] = mixed;
         BG_PALETTE[color_count] = mixed;
         BG_PALETTE_SUB[color_count] = mixed;
+        SPRITE_PALETTE[color_count] = mixed;
         shades[fg][bg][level - 1] = color_count++;
     }
     return shades[fg][bg][level - 1];
