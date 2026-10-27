@@ -102,3 +102,9 @@ Este projeto teve auxílio do Claude no código, na revisão e na organização.
 
 O jogo usa a fonte [Mitr](https://github.com/cadsondemak/mitr), da Cadson
 Demak, sob a SIL Open Font License (veja `OFL.txt`).
+
+## Licença
+
+O código está sob a licença MIT (veja `LICENSE`). As listas de palavras em
+`data/` não: elas pertencem a Fernando Serboncini e são usadas com permissão
+dele. A fonte Mitr está sob a SIL Open Font License (veja `OFL.txt`).

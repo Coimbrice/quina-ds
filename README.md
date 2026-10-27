@@ -100,3 +100,9 @@ This project had help from Claude with code, review and organization.
 
 The game uses the [Mitr](https://github.com/cadsondemak/mitr) font by Cadson
 Demak, licensed under the SIL Open Font License (see `OFL.txt`).
+
+## License
+
+The code is under the MIT License (see `LICENSE`). The word lists in `data/`
+are not: they belong to Fernando Serboncini and are used with his permission.
+The Mitr font is under the SIL Open Font License (see `OFL.txt`).
