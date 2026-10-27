@@ -100,6 +100,14 @@ Feito por Coimbrice.
 
 Este projeto teve auxílio do Claude no código, na revisão e na organização.
 
+Música: "Gem Waltz", composição e arranjo de Haley Halcyon, do
+[OpenGameArt](https://opengameart.org/content/gem-waltz-free-music-loop), sob
+a licença [CC-BY 4.0](https://creativecommons.org/licenses/by/4.0/).
+Convertida para mono em 16 kHz para o DS.
+
+Efeitos sonoros: [Interface Sounds](https://kenney.nl/assets/interface-sounds),
+de Kenney, em CC0.
+
 O jogo usa a fonte [Mitr](https://github.com/cadsondemak/mitr), da Cadson
 Demak, sob a SIL Open Font License (veja `OFL.txt`).
 
