@@ -13,5 +13,7 @@ enum menu_choice {
 void menu_start(bool title);
 // Handles one frame of input. Returns the mode the player picked, if any.
 enum menu_choice menu_update(void);
+// Takes the menu off the screens once the game starts.
+void menu_close(void);
 
 #endif

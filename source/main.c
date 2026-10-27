@@ -6,6 +6,7 @@
 
 #include "gfx.h"
 #include "keyboard.h"
+#include "logo.h"
 #include "menu.h"
 #include "play.h"
 #include "save.h"
@@ -18,6 +19,7 @@ int main(void)
 
     gfx_init();
     keyboard_init();
+    logo_init();
     keysSetRepeat(20, 6);
     srand(time(NULL));
 
@@ -44,6 +46,7 @@ int main(void)
             enum menu_choice choice = menu_update();
             if (choice != MENU_NONE) {
                 gfx_fade_out(false);
+                menu_close();
                 play_open(choice == MENU_DAILY);
                 gfx_fade_in(false);
                 playing = true;

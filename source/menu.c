@@ -4,14 +4,11 @@
 
 #include "board.h"
 #include "gfx.h"
+#include "logo.h"
 #include "menu.h"
 #include "play.h"
 #include "save.h"
 #include "stats.h"
-
-#define LOGO_TILE 44
-#define LOGO_GAP 5
-#define LOGO_Y 50
 
 #define ITEM_X 38
 #define ITEM_W 180
@@ -79,18 +76,10 @@ static int stats_mode;
 
 static void draw_logo(void)
 {
-    static const enum color colors[] = {
-        COLOR_CORRECT, COLOR_PRESENT, COLOR_ABSENT, COLOR_CORRECT, COLOR_PRESENT,
-    };
-    int x = (SCREEN_W - 5 * LOGO_TILE - 4 * LOGO_GAP) / 2;
-
     gfx_clear(TOP, COLOR_BG);
-    for (int i = 0; i < 5; i++) {
-        draw_tile(TOP, x + i * (LOGO_TILE + LOGO_GAP), LOGO_Y, LOGO_TILE, LOGO_TILE, FONT_TITLE,
-                  "QUINA"[i], colors[i], false, false);
-    }
-    gfx_text(TOP, SCREEN_W / 2, LOGO_Y + LOGO_TILE + 30, "Jogo de palavras", FONT_MEDIUM,
-             COLOR_DIM_TEXT);
+    gfx_text(TOP, SCREEN_W / 2, 126, "Jogo de palavras", FONT_MEDIUM, COLOR_DIM_TEXT);
+    logo_show();
+    logo_update(frame);
 }
 
 // Look of an item's button: focused, and sunk while it's being pressed.
@@ -241,6 +230,11 @@ static void draw(void)
     }
 }
 
+void menu_close(void)
+{
+    logo_hide();
+}
+
 void menu_start(bool title)
 {
     page = title ? PAGE_TITLE : PAGE_MAIN;
@@ -252,10 +246,12 @@ void menu_start(bool title)
 
 static void go_to(enum page p, int item)
 {
-    if (p == PAGE_STATS)
+    if (p == PAGE_STATS) {
+        logo_hide();
         stats_draw(stats_daily, stats_mode, -1);
-    else if (page == PAGE_STATS)
+    } else if (page == PAGE_STATS) {
         draw_logo();
+    }
     page = p;
     focused = item;
 }
@@ -387,6 +383,7 @@ enum menu_choice menu_update(void)
     enum menu_choice choice = MENU_NONE;
 
     frame++;
+    logo_update(frame);
     if (page == PAGE_TITLE) {
         if (down & (KEY_START | KEY_A | KEY_TOUCH)) {
             page = PAGE_MAIN;
