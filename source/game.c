@@ -97,3 +97,39 @@ enum hint game_key_hint(const struct game *g, int board, char letter)
     }
     return best;
 }
+
+enum hard_rule game_check_hard(const struct game *g, const char *guess, int *position, char *letter)
+{
+    uint8_t hints[WORD_LEN];
+
+    for (int b = 0; b < g->num_boards; b++) {
+        if (g->solved_at[b] >= 0)
+            continue;
+
+        for (int row = 0; row < g->num_guesses; row++) {
+            const char *old = g->guesses[row];
+            int needed[26] = { 0 };
+
+            game_hints(g, b, row, hints);
+            for (int i = 0; i < WORD_LEN; i++) {
+                if (hints[i] == HINT_CORRECT && guess[i] != old[i]) {
+                    *position = i;
+                    *letter = old[i];
+                    return HARD_POSITION;
+                }
+                if (hints[i] != HINT_ABSENT)
+                    needed[old[i] - 'a']++;
+            }
+
+            for (int i = 0; i < WORD_LEN; i++)
+                needed[guess[i] - 'a']--;
+            for (int c = 0; c < 26; c++) {
+                if (needed[c] > 0) {
+                    *letter = 'a' + c;
+                    return HARD_MISSING;
+                }
+            }
+        }
+    }
+    return HARD_OK;
+}

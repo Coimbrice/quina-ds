@@ -23,6 +23,13 @@ enum hint {
     HINT_CORRECT,
 };
 
+// Rules a guess can break in hard mode.
+enum hard_rule {
+    HARD_OK,
+    HARD_POSITION,
+    HARD_MISSING,
+};
+
 // Words are WORD_LEN lowercase ASCII letters, not null-terminated.
 struct game {
     int num_boards;
@@ -48,5 +55,11 @@ bool game_over(const struct game *g);
 int game_rows(const struct game *g, int board);
 void game_hints(const struct game *g, int board, int row, uint8_t hints[WORD_LEN]);
 enum hint game_key_hint(const struct game *g, int board, char letter);
+
+// In hard mode a guess must use what earlier guesses revealed on the boards
+// still being played: green letters in place and yellow letters somewhere.
+// When a rule is broken, position and letter tell what was expected.
+enum hard_rule game_check_hard(const struct game *g, const char *guess, int *position,
+                               char *letter);
 
 #endif

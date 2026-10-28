@@ -97,11 +97,45 @@ static void test_game_lost(void)
     CHECK(!game_won(&g));
 }
 
+static void test_hard_mode(void)
+{
+    const char answers[][WORD_LEN] = { { 'c', 'a', 'r', 't', 'a' }, { 'p', 'o', 'm', 'b', 'o' } };
+    struct game g;
+    int position = -1;
+    char letter = 0;
+
+    game_start(&g, 1, answers);
+    CHECK(game_check_hard(&g, "fuzil", &position, &letter) == HARD_OK);
+
+    // tarca against carta is YGGYG.
+    game_guess(&g, "tarca");
+    CHECK(game_check_hard(&g, "fuzil", &position, &letter) == HARD_POSITION);
+    CHECK(position == 1 && letter == 'a');
+    CHECK(game_check_hard(&g, "parda", &position, &letter) == HARD_MISSING);
+    CHECK(letter == 'c' || letter == 't');
+    CHECK(game_check_hard(&g, "carta", &position, &letter) == HARD_OK);
+    CHECK(game_check_hard(&g, "tarca", &position, &letter) == HARD_OK);
+
+    // A repeated letter has to show up as many times as it was found:
+    // arara against carta is YY..G, so two a's and an r.
+    game_start(&g, 1, answers);
+    game_guess(&g, "arara");
+    CHECK(game_check_hard(&g, "aorta", &position, &letter) == HARD_OK);
+    CHECK(game_check_hard(&g, "terra", &position, &letter) == HARD_MISSING);
+    CHECK(letter == 'a');
+
+    // Solved boards don't constrain the next guesses.
+    game_start(&g, 2, answers);
+    game_guess(&g, "carta");
+    CHECK(game_check_hard(&g, "fuzil", &position, &letter) == HARD_OK);
+}
+
 int main(void)
 {
     test_evaluate();
     test_game();
     test_game_lost();
+    test_hard_mode();
 
     if (failures > 0) {
         printf("%d failure(s)\n", failures);
