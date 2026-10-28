@@ -8,6 +8,9 @@ word, or play two or four words at once.
 Inspirado em Termo (term.ooo), de Fernando Serboncini. Lista de palavras usada
 com permissão do autor.
 
+Quina is an unofficial homebrew project and is not affiliated with or endorsed
+by Nintendo. Nintendo DS is a trademark of Nintendo.
+
 ## Modes
 
 - **Quina**: one word, 6 guesses.

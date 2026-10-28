@@ -8,6 +8,9 @@ letras, ou jogue com duas ou quatro palavras ao mesmo tempo.
 Inspirado em Termo (term.ooo), de Fernando Serboncini. Lista de palavras usada
 com permissão do autor.
 
+Quina é um projeto homebrew não oficial, sem afiliação com a Nintendo e sem
+aprovação dela. Nintendo DS é uma marca registrada da Nintendo.
+
 ## Modos
 
 - **Quina**: uma palavra, 6 tentativas.
