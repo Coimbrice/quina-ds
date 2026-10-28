@@ -12,6 +12,7 @@
 #include "keyboard.h"
 #include "play.h"
 #include "save.h"
+#include "sound.h"
 #include "stats.h"
 #include "words.h"
 
@@ -205,12 +206,14 @@ static void move_cursor(int dx)
 static void submit(void)
 {
     if (memchr(cur->typed, 0, WORD_LEN)) {
+        sound_play(SOUND_CLICK);
         show_message("Só palavras com 5 letras");
         return;
     }
 
     int index = word_find(cur->typed);
     if (index < 0) {
+        sound_play(SOUND_CLICK);
         show_message("Essa palavra não é aceita");
         return;
     }
@@ -218,6 +221,7 @@ static void submit(void)
     memcpy(saved->guesses[saved->num_guesses++], word_text(index), WORD_LEN);
     before_guess = cur->game;
     game_guess(&cur->game, word_text(index));
+    sound_play(SOUND_SUBMIT);
     reveal = 0;
     memset(cur->typed, 0, sizeof(cur->typed));
     cur->cursor = 0;
@@ -236,6 +240,8 @@ static void submit(void)
 static void press(char c)
 {
     keyboard_press(keyboard_find(c));
+    if (c != KB_ENTER)
+        sound_play(SOUND_CLICK);
 
     if (c == KB_ENTER)
         submit();
@@ -261,6 +267,7 @@ static void handle_touch(int x, int y)
         if (box < WORD_LEN) {
             cur->cursor = box;
             focus_keys = false;
+            sound_play(SOUND_CLICK);
         }
         return;
     }
@@ -278,6 +285,8 @@ static void handle_buttons(uint32_t down)
         press(KB_ERASE);
     if (down & KEY_R)
         press(KB_ENTER);
+    if (down & (KEY_LEFT | KEY_RIGHT | KEY_UP | KEY_DOWN))
+        sound_play(SOUND_CLICK);
 
     if (focus_keys) {
         if (down & KEY_A)
@@ -335,6 +344,9 @@ static bool choose_item(int item)
 
 static void start_press(int item)
 {
+    bool opens = item == PRESS_HEADER || (item < MODE_COUNT && item != mode);
+
+    sound_play(opens ? SOUND_OPEN : SOUND_CLOSE);
     pressing = item;
     press_timer = PRESS_FRAMES;
 }
@@ -349,14 +361,18 @@ static void handle_menu(uint32_t down, int x, int y)
             }
         }
     }
+    if (down & (KEY_UP | KEY_DOWN))
+        sound_play(SOUND_CLICK);
     if (down & KEY_UP)
         menu_focus = (menu_focus + ITEM_COUNT - 1) % ITEM_COUNT;
     if (down & KEY_DOWN)
         menu_focus = (menu_focus + 1) % ITEM_COUNT;
     if (down & KEY_A)
         start_press(menu_focus);
-    if (down & (KEY_B | KEY_START))
+    if (down & (KEY_B | KEY_START)) {
+        sound_play(SOUND_CLOSE);
         menu_open = false;
+    }
 }
 
 // Runs what was pressed once the button is done sinking. Returns true when
@@ -516,8 +532,11 @@ bool play_update(void)
 
     // Input waits until the new guess is revealed.
     if (reveal >= 0) {
-        if (++reveal == board_reveal_frames())
+        if (++reveal == board_reveal_frames()) {
             reveal = -1;
+            if (game_over(&cur->game))
+                sound_fanfare(game_won(&cur->game));
+        }
         keyboard_animate();
         draw();
         return false;
@@ -547,25 +566,32 @@ bool play_update(void)
         start_press(PRESS_HEADER);
         dirty = true;
     } else if ((down & KEY_X) || (daily && (down & KEY_START))) {
+        sound_play(SOUND_OPEN);
         menu_open = true;
         menu_focus = mode;
         dirty = true;
     } else if (down & KEY_START) {
         // In free play START starts over, asking twice if the game is going.
-        if (game_over(&cur->game) || cur->game.num_guesses == 0 || message == restart_message)
+        if (game_over(&cur->game) || cur->game.num_guesses == 0 || message == restart_message) {
+            sound_play(SOUND_OPEN);
             restart();
-        else
+        } else {
+            sound_play(SOUND_CLICK);
             show_message(restart_message);
+        }
         dirty = true;
     } else if ((down & KEY_SELECT) || (stats_timer && --stats_timer == 0)) {
         // The timer only ever opens the stats, after a game ends.
         showing_stats = (down & KEY_SELECT) ? !showing_stats : true;
+        if (down & KEY_SELECT)
+            sound_play(showing_stats ? SOUND_OPEN : SOUND_CLOSE);
         stats_timer = 0;
         gfx_fade_out(true);
         draw();
         gfx_fade_in(true);
     } else if (game_over(&cur->game)) {
         if (!daily && (down & (KEY_A | KEY_TOUCH))) {
+            sound_play(SOUND_OPEN);
             restart();
             dirty = true;
         }

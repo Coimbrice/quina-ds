@@ -8,6 +8,7 @@
 #include "menu.h"
 #include "play.h"
 #include "save.h"
+#include "sound.h"
 #include "stats.h"
 
 #define ITEM_X 38
@@ -16,8 +17,8 @@
 #define ITEM_STEP 36
 #define ITEM_GAP 6
 
-#define CREDITS_Y 22
-#define CREDITS_STEP 14
+#define CREDITS_Y 20
+#define CREDITS_STEP 11
 
 #define DIALOG_X 28
 #define DIALOG_Y 46
@@ -49,6 +50,9 @@ static const char *const credits[] = {
     "Lista de palavras usada com",
     "permissão do autor.",
     "",
+    "Música \"Gem Waltz\", de Haley Halcyon,",
+    "sob CC-BY 4.0, convertida para o DS.",
+    "Efeitos sonoros de Kenney (CC0).",
     "Fonte Mitr, de Cadson Demak (OFL).",
     "Feito com BlocksDS.",
 };
@@ -310,9 +314,12 @@ static enum menu_choice activate(int item)
         if (item == 0) {
             save.sound_effects = !save.sound_effects;
             save_commit();
+            // Only heard when turning them on, as they were off until now.
+            sound_play(SOUND_ON);
         } else if (item == 1) {
             save.music = !save.music;
             save_commit();
+            sound_update_music();
         } else if (item == 2) {
             go_to(PAGE_ERASE, 0);
         } else {
@@ -340,9 +347,32 @@ static enum menu_choice activate(int item)
     return MENU_NONE;
 }
 
+// Sound of pressing an item, or -1 when it plays only after the action.
+static int item_sound(int item)
+{
+    switch (page) {
+    case PAGE_MAIN:
+        return SOUND_OPEN;
+    case PAGE_OPTIONS:
+        if (item == 0)
+            return save.sound_effects ? SOUND_OFF : -1;
+        if (item == 1)
+            return save.music ? SOUND_OFF : SOUND_ON;
+        return item == 2 ? SOUND_OPEN : SOUND_CLOSE;
+    case PAGE_STATS:
+        return item < 2 ? SOUND_CLICK : SOUND_CLOSE;
+    default:
+        return SOUND_CLOSE;
+    }
+}
+
 // The action of an item happens once its button is done sinking.
 static void press(int item)
 {
+    int sound = item_sound(item);
+    if (sound >= 0)
+        sound_play(sound);
+
     focused = item;
     pressed = item;
     press_timer = PRESS_FRAMES;
@@ -369,6 +399,7 @@ static void touch_item(void)
                 if (inside(&touch, x, item_y(i), w, ITEM_H)) {
                     focused = i;
                     pick_stats(i, c);
+                    sound_play(SOUND_CLICK);
                 }
             }
         } else if (inside(&touch, ITEM_X, item_y(i), ITEM_W, ITEM_H)) {
@@ -386,6 +417,7 @@ enum menu_choice menu_update(void)
     logo_update(frame);
     if (page == PAGE_TITLE) {
         if (down & (KEY_START | KEY_A | KEY_TOUCH)) {
+            sound_play(SOUND_OPEN);
             page = PAGE_MAIN;
             draw();
         } else if (frame % BLINK_FRAMES == 0) {
@@ -411,6 +443,8 @@ enum menu_choice menu_update(void)
     uint32_t prev_key = page == PAGE_ERASE ? KEY_LEFT : KEY_UP;
     uint32_t next_key = page == PAGE_ERASE ? KEY_RIGHT : KEY_DOWN;
 
+    if (down & (prev_key | next_key))
+        sound_play(SOUND_CLICK);
     if (down & prev_key)
         focused = (focused + item_count() - 1) % item_count();
     if (down & next_key)
@@ -419,11 +453,14 @@ enum menu_choice menu_update(void)
         int n = stats_choices(focused);
         int current = focused == 0 ? !stats_daily : stats_mode;
         pick_stats(focused, (current + ((down & KEY_LEFT) ? n - 1 : 1)) % n);
+        sound_play(SOUND_CLICK);
     }
     if (down & KEY_A)
         press(focused);
-    if (down & KEY_B)
+    if ((down & KEY_B) && page != PAGE_MAIN) {
+        sound_play(SOUND_CLOSE);
         back();
+    }
     if (down & KEY_TOUCH)
         touch_item();
 

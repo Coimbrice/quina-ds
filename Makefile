@@ -8,6 +8,10 @@ GAME_ICON	:= icon.png
 
 INCLUDEDIRS	:= source
 SOURCES_C	:= build/words.c
+AUDIODIRS	:= audio
+
+LIBS		:= -lmm9 -lnds9
+LIBDIRS		:= $(BLOCKSDS)/libs/maxmod
 
 include $(BLOCKSDS)/sys/default_makefiles/rom_arm9/Makefile
 

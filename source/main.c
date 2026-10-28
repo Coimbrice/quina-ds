@@ -10,6 +10,7 @@
 #include "menu.h"
 #include "play.h"
 #include "save.h"
+#include "sound.h"
 
 #define SAVE_PATH "/data/quina/save.dat"
 
@@ -25,6 +26,7 @@ int main(void)
 
     // Without an SD card or flashcart the game still runs, it just can't save.
     save_load(fatInitDefault() ? SAVE_PATH : NULL);
+    sound_init();
 
     setBrightness(3, -16);
     menu_start(true);
@@ -34,6 +36,7 @@ int main(void)
         swiWaitForVBlank();
         gfx_present();
         scanKeys();
+        sound_update();
 
         if (playing) {
             if (play_update()) {
