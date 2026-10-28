@@ -4,16 +4,16 @@
 #include "gfx.h"
 #include "keyboard.h"
 
-// Every row has ten keys. The two bottom rows are shifted half a key to
-// the right, closer to the shape of a real keyboard.
+// Every row has ten keys. Each row starts a bit more to the right than the
+// one above it, making steps on the left like a real keyboard.
 #define KEY_Y 84
 #define KEY_W 20
 #define KEY_H 30
 #define KEY_STEP_X 23
 #define KEY_STEP_Y 34
 #define KEYS_PER_ROW 10
-#define ROW_SHIFT (KEY_STEP_X / 2)
-#define KEY_X ((SCREEN_W - KEYS_PER_ROW * KEY_STEP_X + (KEY_STEP_X - KEY_W) - ROW_SHIFT) / 2)
+#define ROW_SHIFT (KEY_STEP_X / 4)
+#define KEY_X ((SCREEN_W - KEYS_PER_ROW * KEY_STEP_X + (KEY_STEP_X - KEY_W) - 2 * ROW_SHIFT) / 2)
 
 // A pressed key sinks for a few frames.
 #define PRESS_FRAMES 6
@@ -80,7 +80,7 @@ void keyboard_init(void)
 {
     key_count = 0;
     for (int row = 0; row < 3; row++) {
-        int x = KEY_X + (row > 0 ? ROW_SHIFT : 0);
+        int x = KEY_X + row * ROW_SHIFT;
         for (const char *c = rows[row]; *c; c++) {
             struct key *k = &keys[key_count++];
             k->c = *c;
