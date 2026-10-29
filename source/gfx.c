@@ -22,6 +22,11 @@ static const uint16_t palette[COLOR_COUNT] = {
 };
 // clang-format on
 
+// High contrast swaps the hint colors for ones that colorblind players can
+// tell apart.
+#define HIGH_CONTRAST_PRESENT RGB(0x85c0f9)
+#define HIGH_CONTRAST_CORRECT RGB(0xf5793a)
+
 // Drawing happens in main RAM because VRAM can't take 8-bit writes.
 static uint8_t buffers[2][SCREEN_W * SCREEN_H] ALIGN(32);
 static int bg_ids[2];
@@ -34,6 +39,31 @@ static bool changed[2];
 static uint16_t colors[256];
 static int color_count;
 static uint8_t shades[COLOR_COUNT][256][2];
+// What each shade was mixed from, to mix it again when the colors change.
+static uint8_t shade_fg[256];
+static uint8_t shade_bg[256];
+static uint8_t shade_level[256];
+
+static void set_color(int i, uint16_t color)
+{
+    colors[i] = color;
+    BG_PALETTE[i] = color;
+    BG_PALETTE_SUB[i] = color;
+    SPRITE_PALETTE[i] = color;
+}
+
+// Mixes level thirds of color a with the rest of color b.
+static uint16_t mix(uint16_t a, uint16_t b, int level)
+{
+    uint16_t mixed = 0;
+
+    for (int shift = 0; shift < 15; shift += 5) {
+        int ca = (a >> shift) & 31;
+        int cb = (b >> shift) & 31;
+        mixed |= ((ca * level + cb * (3 - level)) / 3) << shift;
+    }
+    return mixed;
+}
 
 void gfx_init(void)
 {
@@ -47,13 +77,19 @@ void gfx_init(void)
     bg_ids[TOP] = bgInit(3, BgType_Bmp8, BgSize_B8_256x256, 0, 0);
     bg_ids[BOTTOM] = bgInitSub(3, BgType_Bmp8, BgSize_B8_256x256, 0, 0);
 
-    for (int i = 0; i < COLOR_COUNT; i++) {
-        colors[i] = palette[i];
-        BG_PALETTE[i] = palette[i];
-        BG_PALETTE_SUB[i] = palette[i];
-        SPRITE_PALETTE[i] = palette[i];
-    }
+    for (int i = 0; i < COLOR_COUNT; i++)
+        set_color(i, palette[i]);
     color_count = COLOR_COUNT;
+}
+
+void gfx_set_high_contrast(bool on)
+{
+    set_color(COLOR_PRESENT, on ? HIGH_CONTRAST_PRESENT : palette[COLOR_PRESENT]);
+    set_color(COLOR_CORRECT, on ? HIGH_CONTRAST_CORRECT : palette[COLOR_CORRECT]);
+
+    // A shade is always mixed from colors added before it.
+    for (int i = COLOR_COUNT; i < color_count; i++)
+        set_color(i, mix(colors[shade_fg[i]], colors[shade_bg[i]], shade_level[i]));
 }
 
 void gfx_present(void)
@@ -193,19 +229,10 @@ static int shade(enum color fg, int bg, int level)
         if (color_count == 256)
             return level == 2 ? fg : bg;
 
-        int a = colors[fg];
-        int b = colors[bg];
-        int mixed = 0;
-        for (int shift = 0; shift < 15; shift += 5) {
-            int ca = (a >> shift) & 31;
-            int cb = (b >> shift) & 31;
-            mixed |= ((ca * level + cb * (3 - level)) / 3) << shift;
-        }
-
-        colors[color_count] = mixed;
-        BG_PALETTE[color_count] = mixed;
-        BG_PALETTE_SUB[color_count] = mixed;
-        SPRITE_PALETTE[color_count] = mixed;
+        shade_fg[color_count] = fg;
+        shade_bg[color_count] = bg;
+        shade_level[color_count] = level;
+        set_color(color_count, mix(colors[fg], colors[bg], level));
         shades[fg][bg][level - 1] = color_count++;
     }
     return shades[fg][bg][level - 1];

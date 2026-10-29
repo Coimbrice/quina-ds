@@ -28,6 +28,8 @@ enum color {
 };
 
 void gfx_init(void);
+// Switches the hint colors between the usual ones and high contrast.
+void gfx_set_high_contrast(bool on);
 // Copies what was drawn to the screens. Call it right after the vblank.
 void gfx_present(void);
 // Fades to black, or back from black showing what was drawn. Either both
