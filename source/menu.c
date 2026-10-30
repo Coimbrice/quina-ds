@@ -29,10 +29,11 @@
 
 #define CHECK_SIZE 20
 
-// The hard mode option has a "?" to its right that explains it.
+// The hard mode option is narrower to fit a "?" to its right that explains
+// it, lined up with the buttons below.
 #define HARD_MODE_ROW 3
-#define HARD_HELP_X (ITEM_X + ITEM_W + 6)
 #define HARD_HELP_W 26
+#define HARD_HELP_X (ITEM_X + ITEM_W - HARD_HELP_W)
 
 #define BLINK_FRAMES 40
 #define PRESS_FRAMES 6
@@ -209,6 +210,14 @@ static void draw_main(void)
                state(4));
 }
 
+// Width of an item on the options page.
+static int item_w(int i)
+{
+    if (page == PAGE_OPTIONS && i == HARD_MODE_ROW)
+        return ITEM_W - HARD_HELP_W - ITEM_GAP;
+    return ITEM_W;
+}
+
 static void draw_checkbox(int i, const char *label, bool checked)
 {
     int y = item_y(i) + (pressed == i ? 2 : 0);
@@ -216,7 +225,7 @@ static void draw_checkbox(int i, const char *label, bool checked)
     int box_y = y + (item_h() - CHECK_SIZE) / 2;
 
     if (focused == i && !on_hard_help)
-        gfx_frame(BOTTOM, ITEM_X, y, ITEM_W, item_h(), 2, COLOR_TEXT);
+        gfx_frame(BOTTOM, ITEM_X, y, item_w(i), item_h(), 2, COLOR_TEXT);
     gfx_rect(BOTTOM, box_x, box_y, CHECK_SIZE, CHECK_SIZE, checked ? COLOR_CORRECT : COLOR_KEY);
     if (checked)
         gfx_art(BOTTOM, box_x + 4, box_y + 6, check_icon, 8, 1, COLOR_TEXT);
@@ -464,7 +473,7 @@ static void touch_item(void)
                     sound_play(SOUND_CLICK);
                 }
             }
-        } else if (inside(&touch, ITEM_X, item_y(i), ITEM_W, item_h())) {
+        } else if (inside(&touch, ITEM_X, item_y(i), item_w(i), item_h())) {
             on_hard_help = false;
             press(i);
         }
