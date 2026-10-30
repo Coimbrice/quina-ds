@@ -34,6 +34,8 @@ struct saved_game {
 struct save {
     uint8_t sound_effects;
     uint8_t music;
+    uint8_t high_contrast;
+    uint8_t hard_mode;
     uint8_t last_mode[2];
     struct stats stats[2][MODE_COUNT];
     struct saved_game games[2][MODE_COUNT];

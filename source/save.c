@@ -4,7 +4,7 @@
 
 #include "save.h"
 
-#define VERSION 1
+#define VERSION 2
 
 static const char magic[4] = { 'Q', 'U', 'I', 'N' };
 

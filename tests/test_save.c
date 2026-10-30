@@ -22,6 +22,7 @@ static void test_round_trip(void)
 
     save_defaults(&written);
     written.music = 0;
+    written.hard_mode = 1;
     written.last_mode[1] = MODE_QUADRA;
     written.stats[1][MODE_DUQUE].wins = 12;
     written.games[0][MODE_QUINA].started = 1;
