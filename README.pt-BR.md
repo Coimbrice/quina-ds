@@ -29,6 +29,10 @@ Depois de cada chute, os tiles mostram o quanto você chegou perto:
 
 Não precisa digitar acentos: eles aparecem quando o chute é revelado.
 
+Nas opções há o modo de alto contraste, com laranja e azul no lugar de verde e
+amarelo, e o modo difícil, em que toda dica revelada tem que ser usada nos
+chutes seguintes.
+
 ## Controles
 
 | Entrada | Ação |
@@ -39,6 +43,7 @@ Não precisa digitar acentos: eles aparecem quando o chute é revelado.
 | B / L | Apagar |
 | R | Enviar o chute |
 | SELECT | Mostrar ou esconder as estatísticas |
+| Y ou ? | Mostrar ou esconder como jogar |
 | X | Abrir o menu (trocar de modo ou sair) |
 | START | Diário: abrir o menu. Jogo livre: começar outra partida |
 

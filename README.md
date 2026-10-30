@@ -29,6 +29,10 @@ After each guess, the tiles show how close it was:
 
 Accents don't need to be typed: they're filled in when the guess is revealed.
 
+The options have a high contrast mode, with orange and blue instead of green
+and yellow, and a hard mode, where every hint revealed must be used in the
+next guesses.
+
 ## Controls
 
 | Input | Action |
@@ -39,6 +43,7 @@ Accents don't need to be typed: they're filled in when the guess is revealed.
 | B / L | Erase |
 | R | Send the guess |
 | SELECT | Show or hide the stats |
+| Y or ? | Show or hide how to play |
 | X | Open the menu (switch modes or quit) |
 | START | Daily: open the menu. Free play: start a new game |
 
