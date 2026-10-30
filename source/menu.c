@@ -13,8 +13,6 @@
 
 #define ITEM_X 38
 #define ITEM_W 180
-#define ITEM_H 30
-#define ITEM_STEP 36
 #define ITEM_GAP 6
 
 #define CREDITS_Y 20
@@ -92,10 +90,21 @@ static int state(int i)
     return (focused == i ? BUTTON_FOCUSED : 0) | (pressed == i ? BUTTON_PRESSED : 0);
 }
 
+// The options page has more items, so they're a bit shorter.
+static int item_h(void)
+{
+    return page == PAGE_OPTIONS ? 26 : 30;
+}
+
+static int item_step(void)
+{
+    return page == PAGE_OPTIONS ? 30 : 36;
+}
+
 static int item_count(void)
 {
     static const int counts[] = {
-        [PAGE_MAIN] = 5, [PAGE_OPTIONS] = 4, [PAGE_ERASE] = 2, [PAGE_STATS] = 3, [PAGE_CREDITS] = 1,
+        [PAGE_MAIN] = 5, [PAGE_OPTIONS] = 6, [PAGE_ERASE] = 2, [PAGE_STATS] = 3, [PAGE_CREDITS] = 1,
     };
     return counts[page];
 }
@@ -105,8 +114,8 @@ static int item_count(void)
 static int item_y(int i)
 {
     if (page == PAGE_CREDITS)
-        return SCREEN_H - ITEM_H - 8;
-    return (SCREEN_H - item_count() * ITEM_STEP + (ITEM_STEP - ITEM_H)) / 2 + i * ITEM_STEP;
+        return SCREEN_H - item_h() - 8;
+    return (SCREEN_H - item_count() * item_step() + (item_step() - item_h())) / 2 + i * item_step();
 }
 
 // The first two rows of the stats page split into one button per choice.
@@ -145,17 +154,17 @@ static void draw_stats_page(void)
 
     for (int i = 0; i < 2; i++) {
         stats_button(0, i, &x, &w);
-        gfx_button(BOTTOM, x, item_y(0), w, ITEM_H, kinds[i], FONT_MEDIUM,
+        gfx_button(BOTTOM, x, item_y(0), w, item_h(), kinds[i], FONT_MEDIUM,
                    stats_daily == (i == 0) ? COLOR_CORRECT : COLOR_KEY,
                    focused == 0 && stats_daily == (i == 0) ? BUTTON_FOCUSED : 0);
     }
     for (int m = 0; m < MODE_COUNT; m++) {
         stats_button(1, m, &x, &w);
-        gfx_button(BOTTOM, x, item_y(1), w, ITEM_H, mode_names[m], FONT_MEDIUM,
+        gfx_button(BOTTOM, x, item_y(1), w, item_h(), mode_names[m], FONT_MEDIUM,
                    stats_mode == m ? COLOR_CORRECT : COLOR_KEY,
                    focused == 1 && stats_mode == m ? BUTTON_FOCUSED : 0);
     }
-    gfx_button(BOTTOM, ITEM_X, item_y(2), ITEM_W, ITEM_H, "Voltar", FONT_MEDIUM, COLOR_KEY,
+    gfx_button(BOTTOM, ITEM_X, item_y(2), ITEM_W, item_h(), "Voltar", FONT_MEDIUM, COLOR_KEY,
                state(2));
 }
 
@@ -165,7 +174,7 @@ static void draw_credits(void)
         gfx_text(BOTTOM, SCREEN_W / 2, CREDITS_Y + i * CREDITS_STEP, credits[i],
                  i == 0 ? FONT_MEDIUM : FONT_SMALL, i == 0 ? COLOR_TEXT : COLOR_DIM_TEXT);
     }
-    gfx_button(BOTTOM, ITEM_X, item_y(0), ITEM_W, ITEM_H, "Voltar", FONT_MEDIUM, COLOR_KEY,
+    gfx_button(BOTTOM, ITEM_X, item_y(0), ITEM_W, item_h(), "Voltar", FONT_MEDIUM, COLOR_KEY,
                state(0));
 }
 
@@ -180,15 +189,15 @@ static void draw_main(void)
     else
         snprintf(daily, sizeof(daily), "Desafio diário");
 
-    gfx_button(BOTTOM, ITEM_X, item_y(0), ITEM_W, ITEM_H, daily, FONT_MEDIUM,
+    gfx_button(BOTTOM, ITEM_X, item_y(0), ITEM_W, item_h(), daily, FONT_MEDIUM,
                done == MODE_COUNT ? COLOR_CORRECT : COLOR_KEY, state(0));
-    gfx_button(BOTTOM, ITEM_X, item_y(1), ITEM_W, ITEM_H, "Jogo livre", FONT_MEDIUM, COLOR_KEY,
+    gfx_button(BOTTOM, ITEM_X, item_y(1), ITEM_W, item_h(), "Jogo livre", FONT_MEDIUM, COLOR_KEY,
                state(1));
-    gfx_button(BOTTOM, ITEM_X, item_y(2), ITEM_W, ITEM_H, "Estatísticas", FONT_MEDIUM, COLOR_KEY,
+    gfx_button(BOTTOM, ITEM_X, item_y(2), ITEM_W, item_h(), "Estatísticas", FONT_MEDIUM, COLOR_KEY,
                state(2));
-    gfx_button(BOTTOM, ITEM_X, item_y(3), ITEM_W, ITEM_H, "Opções", FONT_MEDIUM, COLOR_KEY,
+    gfx_button(BOTTOM, ITEM_X, item_y(3), ITEM_W, item_h(), "Opções", FONT_MEDIUM, COLOR_KEY,
                state(3));
-    gfx_button(BOTTOM, ITEM_X, item_y(4), ITEM_W, ITEM_H, "Créditos", FONT_MEDIUM, COLOR_KEY,
+    gfx_button(BOTTOM, ITEM_X, item_y(4), ITEM_W, item_h(), "Créditos", FONT_MEDIUM, COLOR_KEY,
                state(4));
 }
 
@@ -196,17 +205,17 @@ static void draw_checkbox(int i, const char *label, bool checked)
 {
     int y = item_y(i) + (pressed == i ? 2 : 0);
     int box_x = ITEM_X + 8;
-    int box_y = y + (ITEM_H - CHECK_SIZE) / 2;
+    int box_y = y + (item_h() - CHECK_SIZE) / 2;
 
     if (focused == i)
-        gfx_frame(BOTTOM, ITEM_X, y, ITEM_W, ITEM_H, 2, COLOR_TEXT);
+        gfx_frame(BOTTOM, ITEM_X, y, ITEM_W, item_h(), 2, COLOR_TEXT);
     gfx_rect(BOTTOM, box_x, box_y, CHECK_SIZE, CHECK_SIZE, checked ? COLOR_CORRECT : COLOR_KEY);
     if (checked)
         gfx_art(BOTTOM, box_x + 4, box_y + 6, check_icon, 8, 1, COLOR_TEXT);
 
     int text_x = box_x + CHECK_SIZE + 10;
     gfx_text(BOTTOM, text_x + gfx_text_width(label, FONT_MEDIUM) / 2,
-             y + (ITEM_H + fonts[FONT_MEDIUM].cap_height) / 2, label, FONT_MEDIUM, COLOR_TEXT);
+             y + (item_h() + fonts[FONT_MEDIUM].cap_height) / 2, label, FONT_MEDIUM, COLOR_TEXT);
 }
 
 static void draw(void)
@@ -221,10 +230,12 @@ static void draw(void)
     } else if (page == PAGE_OPTIONS) {
         draw_checkbox(0, "Efeitos sonoros", save.sound_effects);
         draw_checkbox(1, "Música", save.music);
-        gfx_button(BOTTOM, ITEM_X, item_y(2), ITEM_W, ITEM_H, "Apagar dados", FONT_MEDIUM,
-                   COLOR_KEY, state(2));
-        gfx_button(BOTTOM, ITEM_X, item_y(3), ITEM_W, ITEM_H, "Voltar", FONT_MEDIUM, COLOR_KEY,
-                   state(3));
+        draw_checkbox(2, "Alto contraste", save.high_contrast);
+        draw_checkbox(3, "Modo difícil", save.hard_mode);
+        gfx_button(BOTTOM, ITEM_X, item_y(4), ITEM_W, item_h(), "Apagar dados", FONT_MEDIUM,
+                   COLOR_KEY, state(4));
+        gfx_button(BOTTOM, ITEM_X, item_y(5), ITEM_W, item_h(), "Voltar", FONT_MEDIUM, COLOR_KEY,
+                   state(5));
     } else if (page == PAGE_ERASE) {
         draw_erase();
     } else if (page == PAGE_STATS) {
@@ -275,22 +286,23 @@ static void back(void)
     if (page == PAGE_OPTIONS)
         go_to(PAGE_MAIN, 3);
     else if (page == PAGE_ERASE)
-        go_to(PAGE_OPTIONS, 2);
+        go_to(PAGE_OPTIONS, 4);
     else if (page == PAGE_STATS)
         go_to(PAGE_MAIN, 2);
     else if (page == PAGE_CREDITS)
         go_to(PAGE_MAIN, 4);
 }
 
-// Clears stats and games but keeps the sound options.
+// Clears stats and games but keeps the options.
 static void erase_data(void)
 {
-    uint8_t sound_effects = save.sound_effects;
-    uint8_t music = save.music;
+    struct save options = save;
 
     save_defaults(&save);
-    save.sound_effects = sound_effects;
-    save.music = music;
+    save.sound_effects = options.sound_effects;
+    save.music = options.music;
+    save.high_contrast = options.high_contrast;
+    save.hard_mode = options.hard_mode;
     save_commit();
     play_forget();
 }
@@ -321,6 +333,13 @@ static enum menu_choice activate(int item)
             save_commit();
             sound_update_music();
         } else if (item == 2) {
+            save.high_contrast = !save.high_contrast;
+            save_commit();
+            gfx_set_high_contrast(save.high_contrast);
+        } else if (item == 3) {
+            save.hard_mode = !save.hard_mode;
+            save_commit();
+        } else if (item == 4) {
             go_to(PAGE_ERASE, 0);
         } else {
             back();
@@ -358,7 +377,11 @@ static int item_sound(int item)
             return save.sound_effects ? SOUND_OFF : -1;
         if (item == 1)
             return save.music ? SOUND_OFF : SOUND_ON;
-        return item == 2 ? SOUND_OPEN : SOUND_CLOSE;
+        if (item == 2)
+            return save.high_contrast ? SOUND_OFF : SOUND_ON;
+        if (item == 3)
+            return save.hard_mode ? SOUND_OFF : SOUND_ON;
+        return item == 4 ? SOUND_OPEN : SOUND_CLOSE;
     case PAGE_STATS:
         return item < 2 ? SOUND_CLICK : SOUND_CLOSE;
     default:
@@ -396,13 +419,13 @@ static void touch_item(void)
             for (int c = 0; c < stats_choices(i); c++) {
                 int x, w;
                 stats_button(i, c, &x, &w);
-                if (inside(&touch, x, item_y(i), w, ITEM_H)) {
+                if (inside(&touch, x, item_y(i), w, item_h())) {
                     focused = i;
                     pick_stats(i, c);
                     sound_play(SOUND_CLICK);
                 }
             }
-        } else if (inside(&touch, ITEM_X, item_y(i), ITEM_W, ITEM_H)) {
+        } else if (inside(&touch, ITEM_X, item_y(i), ITEM_W, item_h())) {
             press(i);
         }
     }

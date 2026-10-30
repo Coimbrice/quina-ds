@@ -27,6 +27,7 @@ int main(void)
     // Without an SD card or flashcart the game still runs, it just can't save.
     save_load(fatInitDefault() ? SAVE_PATH : NULL);
     sound_init();
+    gfx_set_high_contrast(save.high_contrast);
 
     setBrightness(3, -16);
     menu_start(true);

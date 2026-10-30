@@ -218,6 +218,24 @@ static void submit(void)
         return;
     }
 
+    if (save.hard_mode) {
+        static char text[40];
+        int position;
+        char letter;
+
+        enum hard_rule rule = game_check_hard(&cur->game, word_text(index), &position, &letter);
+        if (rule != HARD_OK) {
+            if (rule == HARD_POSITION)
+                snprintf(text, sizeof(text), "A letra %d tem que ser %c", position + 1,
+                         letter - 'a' + 'A');
+            else
+                snprintf(text, sizeof(text), "O chute tem que ter a letra %c", letter - 'a' + 'A');
+            sound_play(SOUND_CLICK);
+            show_message(text);
+            return;
+        }
+    }
+
     memcpy(saved->guesses[saved->num_guesses++], word_text(index), WORD_LEN);
     before_guess = cur->game;
     game_guess(&cur->game, word_text(index));
