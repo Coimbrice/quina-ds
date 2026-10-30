@@ -24,9 +24,9 @@ void help_draw(void)
 
     gfx_clear(TOP, COLOR_BG);
     gfx_text(TOP, SCREEN_W / 2, 16, "Como jogar", FONT_MEDIUM, COLOR_TEXT);
-    gfx_text(TOP, SCREEN_W / 2, 32, "Descubra a palavra. As cores mostram o quanto",
-             FONT_SMALL, COLOR_DIM_TEXT);
-    gfx_text(TOP, SCREEN_W / 2, 42, "cada chute chegou perto.", FONT_SMALL,
+    gfx_text(TOP, SCREEN_W / 2, 32, "Descubra a palavra. As cores mostram", FONT_SMALL,
+             COLOR_DIM_TEXT);
+    gfx_text(TOP, SCREEN_W / 2, 42, "o quanto cada chute chegou perto.", FONT_SMALL,
              COLOR_DIM_TEXT);
 
     for (int e = 0; e < 3; e++) {
