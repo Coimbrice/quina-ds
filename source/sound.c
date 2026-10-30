@@ -1,3 +1,5 @@
+#include <stdlib.h>
+
 #include <nds.h>
 #include <maxmod9.h>
 
@@ -23,7 +25,6 @@ static mm_sfxhand music = MM_SFXHAND_INVALID;
 static mm_sfxhand fanfare = MM_SFXHAND_INVALID;
 static int quiet_frames;
 static int fade_frames;
-static bool second_click;
 
 void sound_init(void)
 {
@@ -58,9 +59,8 @@ void sound_play(enum sound s)
 
     switch (s) {
     case SOUND_CLICK:
-        // Two clicks take turns so typing doesn't sound mechanical.
-        play(second_click ? SFX_CLICK_003 : SFX_CLICK_002, 255);
-        second_click = !second_click;
+        // One of two clicks at random, so typing doesn't sound mechanical.
+        play(rand() % 2 ? SFX_CLICK_003 : SFX_CLICK_002, 255);
         break;
     case SOUND_SUBMIT:
         play(SFX_BONG_001, 255);
