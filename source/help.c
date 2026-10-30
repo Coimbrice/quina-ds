@@ -42,3 +42,35 @@ void help_draw(void)
     gfx_text(TOP, SCREEN_W / 2, SCREEN_H - 8, "Os acentos aparecem sozinhos.", FONT_SMALL,
              COLOR_DIM_TEXT);
 }
+
+void help_draw_hard_mode(void)
+{
+    static const char *const before[] = {
+        "As dicas reveladas têm que ser usadas",
+        "nos chutes seguintes.",
+    };
+    static const char *const after[] = {
+        "Depois deste chute, o próximo tem que ter",
+        "T na primeira posição e um R em qualquer",
+        "lugar, senão ele não é aceito.",
+        "",
+        "No Duque e na Quadra, só contam",
+        "as grades ainda não resolvidas.",
+    };
+    int x0 = (SCREEN_W - WORD_LEN * TILE - (WORD_LEN - 1) * TILE_GAP) / 2;
+
+    gfx_clear(TOP, COLOR_BG);
+    gfx_text(TOP, SCREEN_W / 2, 18, "Modo difícil", FONT_MEDIUM, COLOR_TEXT);
+    for (int i = 0; i < 2; i++)
+        gfx_text(TOP, SCREEN_W / 2, 38 + i * 11, before[i], FONT_SMALL, COLOR_TEXT);
+
+    for (int i = 0; i < WORD_LEN; i++) {
+        enum color fill = i == 0 ? COLOR_CORRECT : i == 2 ? COLOR_PRESENT : COLOR_ABSENT;
+        draw_tile(TOP, x0 + i * (TILE + TILE_GAP), 66, TILE, TILE, FONT_MEDIUM, "TURMA"[i], fill,
+                  false, false);
+    }
+
+    for (int i = 0; i < 6; i++)
+        gfx_text(TOP, SCREEN_W / 2, 108 + i * 11, after[i], FONT_SMALL,
+                 i < 3 ? COLOR_TEXT : COLOR_DIM_TEXT);
+}
