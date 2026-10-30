@@ -24,6 +24,7 @@ SOUNDS = [
     (f"{KENNEY}/click_002.wav", "click_002.wav", 22050, False),
     (f"{KENNEY}/click_003.wav", "click_003.wav", 22050, False),
     (f"{KENNEY}/bong_001.wav", "bong_001.wav", 22050, False),
+    (f"{KENNEY}/error_004.wav", "error_004.wav", 22050, False),
     (f"{KENNEY}/maximize_008.wav", "maximize_008.wav", 22050, False),
     (f"{KENNEY}/minimize_008.wav", "minimize_008.wav", 22050, False),
     (f"{KENNEY}/select_001.wav", "select_001.wav", 22050, False),
