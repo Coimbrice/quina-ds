@@ -4,6 +4,7 @@
 
 #include "board.h"
 #include "gfx.h"
+#include "help.h"
 #include "logo.h"
 #include "menu.h"
 #include "play.h"
@@ -27,6 +28,11 @@
 #define CHOICE_Y (DIALOG_Y + DIALOG_H - CHOICE_H - 12)
 
 #define CHECK_SIZE 20
+
+// The hard mode option has a "?" to its right that explains it.
+#define HARD_MODE_ROW 3
+#define HARD_HELP_X (ITEM_X + ITEM_W + 6)
+#define HARD_HELP_W 26
 
 #define BLINK_FRAMES 40
 #define PRESS_FRAMES 6
@@ -71,6 +77,8 @@ static const char *const check_icon[] = {
 static enum page page;
 static int focused;
 static int frame;
+static bool on_hard_help;
+static bool showing_hard_help;
 static int pressed = -1;
 static int press_timer;
 static bool stats_daily = true;
@@ -207,7 +215,7 @@ static void draw_checkbox(int i, const char *label, bool checked)
     int box_x = ITEM_X + 8;
     int box_y = y + (item_h() - CHECK_SIZE) / 2;
 
-    if (focused == i)
+    if (focused == i && !on_hard_help)
         gfx_frame(BOTTOM, ITEM_X, y, ITEM_W, item_h(), 2, COLOR_TEXT);
     gfx_rect(BOTTOM, box_x, box_y, CHECK_SIZE, CHECK_SIZE, checked ? COLOR_CORRECT : COLOR_KEY);
     if (checked)
@@ -231,7 +239,10 @@ static void draw(void)
         draw_checkbox(0, "Efeitos sonoros", save.sound_effects);
         draw_checkbox(1, "Música", save.music);
         draw_checkbox(2, "Alto contraste", save.high_contrast);
-        draw_checkbox(3, "Modo difícil", save.hard_mode);
+        draw_checkbox(HARD_MODE_ROW, "Modo difícil", save.hard_mode);
+        gfx_button(BOTTOM, HARD_HELP_X, item_y(HARD_MODE_ROW), HARD_HELP_W, item_h(), "?",
+                   FONT_SMALL, showing_hard_help ? COLOR_CORRECT : COLOR_KEY,
+                   on_hard_help ? BUTTON_FOCUSED : 0);
         gfx_button(BOTTOM, ITEM_X, item_y(4), ITEM_W, item_h(), "Apagar dados", FONT_MEDIUM,
                    COLOR_KEY, state(4));
         gfx_button(BOTTOM, ITEM_X, item_y(5), ITEM_W, item_h(), "Voltar", FONT_MEDIUM, COLOR_KEY,
@@ -254,13 +265,34 @@ void menu_start(bool title)
 {
     page = title ? PAGE_TITLE : PAGE_MAIN;
     focused = 0;
+    on_hard_help = false;
+    showing_hard_help = false;
     frame = 0;
     draw_logo();
     draw();
 }
 
+static void toggle_hard_help(void)
+{
+    showing_hard_help = !showing_hard_help;
+    sound_play(showing_hard_help ? SOUND_OPEN : SOUND_CLOSE);
+    gfx_fade_out(true);
+    if (showing_hard_help) {
+        logo_hide();
+        help_draw_hard_mode();
+    } else {
+        draw_logo();
+    }
+    gfx_fade_in(true);
+}
+
 static void go_to(enum page p, int item)
 {
+    if (showing_hard_help) {
+        showing_hard_help = false;
+        draw_logo();
+    }
+    on_hard_help = false;
     if (p == PAGE_STATS) {
         logo_hide();
         stats_draw(stats_daily, stats_mode, -1);
@@ -411,6 +443,13 @@ static void touch_item(void)
     touchPosition touch;
 
     touchRead(&touch);
+    if (page == PAGE_OPTIONS &&
+        inside(&touch, HARD_HELP_X, item_y(HARD_MODE_ROW), HARD_HELP_W, item_h())) {
+        focused = HARD_MODE_ROW;
+        on_hard_help = true;
+        toggle_hard_help();
+        return;
+    }
     for (int i = 0; i < item_count(); i++) {
         if (page == PAGE_ERASE) {
             if (inside(&touch, choice_x(i), CHOICE_Y, CHOICE_W, CHOICE_H))
@@ -426,6 +465,7 @@ static void touch_item(void)
                 }
             }
         } else if (inside(&touch, ITEM_X, item_y(i), ITEM_W, item_h())) {
+            on_hard_help = false;
             press(i);
         }
     }
@@ -468,18 +508,28 @@ enum menu_choice menu_update(void)
 
     if (down & (prev_key | next_key))
         sound_play(SOUND_CLICK);
+    if (down & (prev_key | next_key))
+        on_hard_help = false;
     if (down & prev_key)
         focused = (focused + item_count() - 1) % item_count();
     if (down & next_key)
         focused = (focused + 1) % item_count();
+    if (page == PAGE_OPTIONS && focused == HARD_MODE_ROW && (down & (KEY_LEFT | KEY_RIGHT))) {
+        on_hard_help = (down & KEY_RIGHT) != 0;
+        sound_play(SOUND_CLICK);
+    }
     if (page == PAGE_STATS && focused < 2 && (down & (KEY_LEFT | KEY_RIGHT))) {
         int n = stats_choices(focused);
         int current = focused == 0 ? !stats_daily : stats_mode;
         pick_stats(focused, (current + ((down & KEY_LEFT) ? n - 1 : 1)) % n);
         sound_play(SOUND_CLICK);
     }
-    if (down & KEY_A)
+    if ((down & KEY_A) && on_hard_help)
+        toggle_hard_help();
+    else if (down & KEY_A)
         press(focused);
+    if ((down & KEY_Y) && page == PAGE_OPTIONS)
+        toggle_hard_help();
     if ((down & KEY_B) && page != PAGE_MAIN) {
         sound_play(SOUND_CLOSE);
         back();
