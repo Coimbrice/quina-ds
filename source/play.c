@@ -9,6 +9,7 @@
 #include "daily.h"
 #include "game.h"
 #include "gfx.h"
+#include "help.h"
 #include "keyboard.h"
 #include "play.h"
 #include "save.h"
@@ -20,6 +21,8 @@
 #define HEADER_H 18
 #define MENU_X 4
 #define MENU_W 52
+#define HELP_X (MENU_X + MENU_W + 4)
+#define HELP_W 20
 #define PROMPT_TILE 28
 #define PROMPT_GAP 4
 #define PROMPT_X ((SCREEN_W - WORD_LEN * PROMPT_TILE - (WORD_LEN - 1) * PROMPT_GAP) / 2)
@@ -41,6 +44,7 @@
 #define PANEL_PAD 8
 // Pressing the header's menu button sinks it like the items.
 #define PRESS_HEADER ITEM_COUNT
+#define PRESS_HELP (ITEM_COUNT + 1)
 #define PRESS_FRAMES 6
 
 // The games themselves are kept in the save. Sessions also remember what
@@ -59,7 +63,14 @@ static bool daily;
 static int mode;
 static struct session *cur;
 static struct saved_game *saved;
-static bool showing_stats;
+// What the top screen shows.
+enum view {
+    VIEW_BOARD,
+    VIEW_STATS,
+    VIEW_HELP,
+};
+
+static enum view view;
 static int stats_timer;
 // While a new guess is being revealed, the keyboard keeps its old colors.
 static int reveal = -1;
@@ -147,7 +158,7 @@ static void switch_mode(int m)
     focused_key = 0;
     message = NULL;
     menu_open = false;
-    showing_stats = false;
+    view = VIEW_BOARD;
     stats_timer = 0;
     reveal = -1;
     draw();
@@ -337,7 +348,7 @@ static void restart(void)
         save_commit();
     }
     new_game();
-    showing_stats = false;
+    view = VIEW_BOARD;
     message = NULL;
 }
 
@@ -360,9 +371,24 @@ static bool choose_item(int item)
     return false;
 }
 
+// Changes what the top screen shows, fading only that screen.
+static void show_view(enum view v)
+{
+    view = v;
+    gfx_fade_out(true);
+    draw();
+    gfx_fade_in(true);
+}
+
+static void toggle_help(void)
+{
+    show_view(view == VIEW_HELP ? VIEW_BOARD : VIEW_HELP);
+}
+
 static void start_press(int item)
 {
-    bool opens = item == PRESS_HEADER || (item < MODE_COUNT && item != mode);
+    bool opens = item == PRESS_HEADER || (item == PRESS_HELP && view != VIEW_HELP) ||
+                 (item < MODE_COUNT && item != mode);
 
     sound_play(opens ? SOUND_OPEN : SOUND_CLOSE);
     pressing = item;
@@ -400,6 +426,10 @@ static bool finish_press(void)
     int item = pressing;
 
     pressing = -1;
+    if (item == PRESS_HELP) {
+        toggle_help();
+        return false;
+    }
     if (item != PRESS_HEADER)
         return choose_item(item);
     menu_open = true;
@@ -416,6 +446,9 @@ static void draw_header(void)
 
     gfx_button(BOTTOM, MENU_X, HEADER_Y, MENU_W, HEADER_H, "Menu", FONT_SMALL, COLOR_KEY,
                pressing == PRESS_HEADER ? BUTTON_PRESSED : 0);
+    gfx_button(BOTTOM, HELP_X, HEADER_Y, HELP_W, HEADER_H, "?", FONT_SMALL,
+               view == VIEW_HELP ? COLOR_CORRECT : COLOR_KEY,
+               pressing == PRESS_HELP ? BUTTON_PRESSED : 0);
     gfx_text(BOTTOM, SCREEN_W - 6 - name_w / 2, baseline, name, FONT_MEDIUM, COLOR_TEXT);
     gfx_text(BOTTOM, SCREEN_W - 12 - name_w - gfx_text_width(kind, FONT_SMALL) / 2, baseline, kind,
              FONT_SMALL, COLOR_DIM_TEXT);
@@ -516,11 +549,13 @@ static void draw(void)
     // The result only shows once the last guess is revealed.
     bool over = game_over(&cur->game) && reveal < 0;
 
-    if (showing_stats) {
+    if (view == VIEW_STATS) {
         int last = -1;
         if (over)
             last = game_won(&cur->game) ? cur->game.num_guesses : 0;
         stats_draw(daily, mode, last);
+    } else if (view == VIEW_HELP) {
+        help_draw();
     } else {
         board_draw(&cur->game, cur->typed, cur->cursor, reveal);
     }
@@ -583,6 +618,13 @@ bool play_update(void)
                inside(touch.px, touch.py, MENU_X, HEADER_Y, MENU_W, HEADER_H)) {
         start_press(PRESS_HEADER);
         dirty = true;
+    } else if ((down & KEY_TOUCH) &&
+               inside(touch.px, touch.py, HELP_X, HEADER_Y, HELP_W, HEADER_H)) {
+        start_press(PRESS_HELP);
+        dirty = true;
+    } else if (down & KEY_Y) {
+        sound_play(view == VIEW_HELP ? SOUND_CLOSE : SOUND_OPEN);
+        toggle_help();
     } else if ((down & KEY_X) || (daily && (down & KEY_START))) {
         sound_play(SOUND_OPEN);
         menu_open = true;
@@ -600,13 +642,13 @@ bool play_update(void)
         dirty = true;
     } else if ((down & KEY_SELECT) || (stats_timer && --stats_timer == 0)) {
         // The timer only ever opens the stats, after a game ends.
-        showing_stats = (down & KEY_SELECT) ? !showing_stats : true;
+        enum view next = VIEW_STATS;
+        if ((down & KEY_SELECT) && view == VIEW_STATS)
+            next = VIEW_BOARD;
         if (down & KEY_SELECT)
-            sound_play(showing_stats ? SOUND_OPEN : SOUND_CLOSE);
+            sound_play(next == VIEW_STATS ? SOUND_OPEN : SOUND_CLOSE);
         stats_timer = 0;
-        gfx_fade_out(true);
-        draw();
-        gfx_fade_in(true);
+        show_view(next);
     } else if (game_over(&cur->game)) {
         if (!daily && (down & (KEY_A | KEY_TOUCH))) {
             sound_play(SOUND_OPEN);
