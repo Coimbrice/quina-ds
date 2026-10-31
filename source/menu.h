@@ -7,6 +7,7 @@ enum menu_choice {
     MENU_NONE,
     MENU_DAILY,
     MENU_FREE,
+    MENU_QUIT,
 };
 
 // Shows the menu, starting from the "press START" screen if title is set.

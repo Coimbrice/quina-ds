@@ -99,21 +99,21 @@ static int state(int i)
     return (focused == i ? BUTTON_FOCUSED : 0) | (pressed == i ? BUTTON_PRESSED : 0);
 }
 
-// The options page has more items, so they're a bit shorter.
+// Pages with more items have them a bit shorter.
 static int item_h(void)
 {
-    return page == PAGE_OPTIONS ? 26 : 30;
+    return page == PAGE_MAIN || page == PAGE_OPTIONS ? 26 : 30;
 }
 
 static int item_step(void)
 {
-    return page == PAGE_OPTIONS ? 30 : 36;
+    return page == PAGE_MAIN || page == PAGE_OPTIONS ? 30 : 36;
 }
 
 static int item_count(void)
 {
     static const int counts[] = {
-        [PAGE_MAIN] = 5, [PAGE_OPTIONS] = 6, [PAGE_ERASE] = 2, [PAGE_STATS] = 3, [PAGE_CREDITS] = 1,
+        [PAGE_MAIN] = 6, [PAGE_OPTIONS] = 6, [PAGE_ERASE] = 2, [PAGE_STATS] = 3, [PAGE_CREDITS] = 1,
     };
     return counts[page];
 }
@@ -208,6 +208,8 @@ static void draw_main(void)
                state(3));
     gfx_button(BOTTOM, ITEM_X, item_y(4), ITEM_W, item_h(), "Créditos", FONT_MEDIUM, COLOR_KEY,
                state(4));
+    gfx_button(BOTTOM, ITEM_X, item_y(5), ITEM_W, item_h(), "Sair", FONT_MEDIUM, COLOR_KEY,
+               state(5));
 }
 
 // Width of an item on the options page.
@@ -360,8 +362,10 @@ static enum menu_choice activate(int item)
             go_to(PAGE_STATS, 1);
         else if (item == 3)
             go_to(PAGE_OPTIONS, 0);
-        else
+        else if (item == 4)
             go_to(PAGE_CREDITS, 0);
+        else
+            return MENU_QUIT;
         break;
     case PAGE_OPTIONS:
         if (item == 0) {
@@ -412,7 +416,7 @@ static int item_sound(int item)
 {
     switch (page) {
     case PAGE_MAIN:
-        return SOUND_OPEN;
+        return item == 5 ? SOUND_CLOSE : SOUND_OPEN;
     case PAGE_OPTIONS:
         if (item == 0)
             return save.sound_effects ? SOUND_OFF : -1;

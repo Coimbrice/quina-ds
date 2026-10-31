@@ -48,6 +48,8 @@ int main(void)
             }
         } else {
             enum menu_choice choice = menu_update();
+            if (choice == MENU_QUIT)
+                break;
             if (choice != MENU_NONE) {
                 gfx_fade_out(false);
                 menu_close();
@@ -58,5 +60,8 @@ int main(void)
         }
     }
 
+    // Returning goes back to the loader that started the game, or turns the
+    // console off when there's none.
+    gfx_fade_out(false);
     return 0;
 }
