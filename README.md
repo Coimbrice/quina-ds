@@ -77,7 +77,7 @@ the system settings.
 
 ## Building
 
-You need [BlocksDS](https://blocksds.skylyrac.net/) and Python 3. On Fedora:
+You need [BlocksDS](https://blocksds.skylyrac.net/) and Python 3. On Linux:
 
     sudo mkdir -p /opt/wonderful && sudo chown $USER /opt/wonderful
     curl -L https://wonderful.asie.pl/bootstrap/wf-bootstrap-x86_64.tar.gz | tar xz -C /opt/wonderful
@@ -88,6 +88,9 @@ You need [BlocksDS](https://blocksds.skylyrac.net/) and Python 3. On Fedora:
     wf-pacman -Syu
     wf-pacman -S blocksds-toolchain
     export BLOCKSDS=/opt/wonderful/thirdparty/blocksds/core
+
+For other systems, follow the
+[BlocksDS setup guide](https://blocksds.skylyrac.net/docs/setup/).
 
 Then:
 
