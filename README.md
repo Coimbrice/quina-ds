@@ -11,6 +11,19 @@ com permissão do autor.
 Quina is an unofficial homebrew project and is not affiliated with or endorsed
 by Nintendo. Nintendo DS is a trademark of Nintendo.
 
+<table>
+  <tr>
+    <td><img src="docs/screenshots/menu.png" alt="Title and main menu" width="256"></td>
+    <td><img src="docs/screenshots/diario.png" alt="Daily challenge" width="256"></td>
+    <td><img src="docs/screenshots/duque-menu.png" alt="Switching modes in Duque" width="256"></td>
+  </tr>
+  <tr>
+    <td><img src="docs/screenshots/quadra.png" alt="Quadra in free play" width="256"></td>
+    <td><img src="docs/screenshots/duque-alto-contraste.png" alt="Duque in high contrast" width="256"></td>
+    <td><img src="docs/screenshots/estatisticas.png" alt="Stats" width="256"></td>
+  </tr>
+</table>
+
 ## Modes
 
 - **Quina**: one word, 6 guesses.
