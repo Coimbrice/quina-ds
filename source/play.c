@@ -217,14 +217,14 @@ static void move_cursor(int dx)
 static void submit(void)
 {
     if (memchr(cur->typed, 0, WORD_LEN)) {
-        sound_play(SOUND_CLICK);
+        sound_play(SOUND_ERROR);
         show_message("Só palavras com 5 letras");
         return;
     }
 
     int index = word_find(cur->typed);
     if (index < 0) {
-        sound_play(SOUND_CLICK);
+        sound_play(SOUND_ERROR);
         show_message("Essa palavra não é aceita");
         return;
     }
@@ -241,7 +241,7 @@ static void submit(void)
                          letter - 'a' + 'A');
             else
                 snprintf(text, sizeof(text), "O chute tem que ter a letra %c", letter - 'a' + 'A');
-            sound_play(SOUND_CLICK);
+            sound_play(SOUND_ERROR);
             show_message(text);
             return;
         }

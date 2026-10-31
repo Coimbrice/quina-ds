@@ -17,8 +17,8 @@
 #define GAMEOVER_FRAMES 354
 
 static const mm_word effects[] = {
-    SFX_CLICK_002,  SFX_CLICK_003,  SFX_BONG_001, SFX_MAXIMIZE_008, SFX_MINIMIZE_008,
-    SFX_SELECT_001, SFX_SELECT_002, SFX_MUSIC,    SFX_CLEARED,      SFX_GAMEOVER,
+    SFX_CLICK_002,  SFX_CLICK_003,  SFX_BONG_001, SFX_ERROR_004, SFX_MAXIMIZE_008, SFX_MINIMIZE_008,
+    SFX_SELECT_001, SFX_SELECT_002, SFX_MUSIC,    SFX_CLEARED,   SFX_GAMEOVER,
 };
 
 static mm_sfxhand music = MM_SFXHAND_INVALID;
@@ -64,6 +64,9 @@ void sound_play(enum sound s)
         break;
     case SOUND_SUBMIT:
         play(SFX_BONG_001, 255);
+        break;
+    case SOUND_ERROR:
+        play(SFX_ERROR_004, 255);
         break;
     case SOUND_OPEN:
         play(SFX_MAXIMIZE_008, 255);

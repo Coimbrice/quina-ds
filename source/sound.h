@@ -6,6 +6,7 @@
 enum sound {
     SOUND_CLICK,
     SOUND_SUBMIT,
+    SOUND_ERROR,
     SOUND_OPEN,
     SOUND_CLOSE,
     SOUND_ON,
