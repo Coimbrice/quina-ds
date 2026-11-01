@@ -7,7 +7,7 @@ GAME_AUTHOR	:= Coimbrice
 GAME_ICON	:= icon.png
 
 INCLUDEDIRS	:= source
-SOURCES_C	:= build/words.c
+SOURCES_C	:= build/words.c build/licenses.c
 AUDIODIRS	:= audio
 
 LIBS		:= -lmm9 -lnds9
@@ -22,6 +22,13 @@ build/words.c: tools/wordlist.py data/answers.txt data/allowed.txt
 	@echo "  WORDS   $@"
 	@$(MKDIR) -p $(@D)
 	$(V)python3 tools/wordlist.py data/answers.txt data/allowed.txt $@
+
+LICENSE_FILES	:= LICENSE THIRD_PARTY.txt OFL.txt data/LICENSE
+
+build/licenses.c: tools/licenses.py $(LICENSE_FILES)
+	@echo "  LICENSE $@"
+	@$(MKDIR) -p $(@D)
+	$(V)python3 tools/licenses.py $@ $(LICENSE_FILES)
 
 .PHONY: test
 
