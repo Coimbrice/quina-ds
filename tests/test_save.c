@@ -47,17 +47,23 @@ static void test_bad_files(void)
     // Flip one byte of the data.
     save_write(path, &defaults);
     f = fopen(path, "r+b");
-    fseek(f, -1, SEEK_END);
-    fputc(0x55, f);
-    fclose(f);
+    CHECK(f);
+    if (f) {
+        fseek(f, -1, SEEK_END);
+        fputc(0x55, f);
+        fclose(f);
+    }
     read.music = 0;
     CHECK(!save_read(path, &read));
     CHECK(memcmp(&read, &defaults, sizeof(read)) == 0);
 
     // Cut the file short.
     f = fopen(path, "wb");
-    fputs("QUIN", f);
-    fclose(f);
+    CHECK(f);
+    if (f) {
+        fputs("QUIN", f);
+        fclose(f);
+    }
     CHECK(!save_read(path, &read));
 }
 
@@ -87,8 +93,11 @@ static void test_temp_file(void)
 
     // Losing power while writing the temporary keeps the last good save.
     f = fopen(temp, "wb");
-    fputs("QUIN", f);
-    fclose(f);
+    CHECK(f);
+    if (f) {
+        fputs("QUIN", f);
+        fclose(f);
+    }
     CHECK(save_read(path, &read));
     CHECK(read.last_mode[0] == MODE_QUADRA);
 
