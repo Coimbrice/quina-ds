@@ -34,13 +34,15 @@ SOUNDS = [
 
 def add_loop(path, rate):
     # A "smpl" chunk with one loop over the whole sound, which mmutil reads.
-    data = open(path, "rb").read()
+    with open(path, "rb") as f:
+        data = f.read()
     frames = (len(data) - 44) // 2
     smpl = struct.pack("<9I", 0, 0, 1000000000 // rate, 60, 0, 0, 0, 1, 0)
     smpl += struct.pack("<6I", 0, 0, 0, frames - 1, 0, 0)
     data += b"smpl" + struct.pack("<I", len(smpl)) + smpl
     data = data[:4] + struct.pack("<I", len(data) - 8) + data[8:]
-    open(path, "wb").write(data)
+    with open(path, "wb") as f:
+        f.write(data)
 
 
 def main():
