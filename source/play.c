@@ -118,6 +118,20 @@ static void load_game(struct game *g, const struct saved_game *sg, int m)
         game_guess(g, sg->guesses[i]);
 }
 
+// A save can outlive the word lists it was played with.
+static bool words_known(const struct saved_game *sg, int m)
+{
+    for (int b = 0; b < mode_boards[m]; b++) {
+        if (word_find(sg->answers[b]) < 0)
+            return false;
+    }
+    for (int i = 0; i < sg->num_guesses; i++) {
+        if (word_find(sg->guesses[i]) < 0)
+            return false;
+    }
+    return true;
+}
+
 static void new_game(void)
 {
     memset(saved, 0, sizeof(*saved));
@@ -147,7 +161,8 @@ static void switch_mode(int m)
     }
 
     // A daily game from an earlier day gives way to today's.
-    if (!saved->started || (daily && saved->day != daily_day(time(NULL)))) {
+    if (!saved->started || (daily && saved->day != daily_day(time(NULL))) ||
+        !words_known(saved, m)) {
         new_game();
     } else if (!cur->loaded) {
         load_game(&cur->game, saved, m);
@@ -179,7 +194,7 @@ int play_daily_done(void)
         const struct saved_game *sg = &save.games[1][m];
         struct game g;
 
-        if (!sg->started || sg->day != today)
+        if (!sg->started || sg->day != today || !words_known(sg, m))
             continue;
         load_game(&g, sg, m);
         if (game_over(&g))
