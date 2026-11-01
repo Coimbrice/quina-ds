@@ -61,6 +61,44 @@ static void test_bad_files(void)
     CHECK(!save_read(path, &read));
 }
 
+static void test_temp_file(void)
+{
+    char temp[280];
+    struct save first;
+    struct save second;
+    struct save read;
+    FILE *f;
+
+    snprintf(temp, sizeof(temp), "%s.tmp", path);
+    save_defaults(&first);
+    first.last_mode[0] = MODE_DUQUE;
+    second = first;
+    second.last_mode[0] = MODE_QUADRA;
+
+    // Saving over an existing file replaces it and leaves no temporary behind.
+    CHECK(save_write(path, &first));
+    CHECK(save_write(path, &second));
+    CHECK(save_read(path, &read));
+    CHECK(read.last_mode[0] == MODE_QUADRA);
+    f = fopen(temp, "rb");
+    CHECK(!f);
+    if (f)
+        fclose(f);
+
+    // Losing power while writing the temporary keeps the last good save.
+    f = fopen(temp, "wb");
+    fputs("QUIN", f);
+    fclose(f);
+    CHECK(save_read(path, &read));
+    CHECK(read.last_mode[0] == MODE_QUADRA);
+
+    // Losing power right after removing the old file keeps the new one.
+    CHECK(rename(path, temp) == 0);
+    CHECK(save_read(path, &read));
+    CHECK(read.last_mode[0] == MODE_QUADRA);
+    remove(temp);
+}
+
 static void test_stats(void)
 {
     struct stats st = { 0 };
@@ -99,6 +137,7 @@ int main(void)
 {
     test_round_trip();
     test_bad_files();
+    test_temp_file();
     test_stats();
 
     if (failures > 0) {

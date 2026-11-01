@@ -5,6 +5,7 @@
 #include "save.h"
 
 #define VERSION 2
+#define TEMP_PATH_MAX 280
 
 static const char magic[4] = { 'Q', 'U', 'I', 'N' };
 
@@ -39,13 +40,17 @@ void save_defaults(struct save *s)
     s->music = 1;
 }
 
-bool save_read(const char *path, struct save *s)
+static void temp_path(const char *path, char temp[TEMP_PATH_MAX])
+{
+    snprintf(temp, TEMP_PATH_MAX, "%s.tmp", path);
+}
+
+static bool read_file(const char *path, struct save *s)
 {
     struct header header;
     struct save loaded;
     FILE *f = fopen(path, "rb");
 
-    save_defaults(s);
     if (!f)
         return false;
 
@@ -58,6 +63,19 @@ bool save_read(const char *path, struct save *s)
     if (ok)
         *s = loaded;
     return ok;
+}
+
+bool save_read(const char *path, struct save *s)
+{
+    char temp[TEMP_PATH_MAX];
+
+    save_defaults(s);
+    if (read_file(path, s))
+        return true;
+
+    // Power can go out between removing the old file and renaming the new one.
+    temp_path(path, temp);
+    return read_file(temp, s);
 }
 
 // Creates the folders leading to path, ignoring the ones that exist.
@@ -83,14 +101,27 @@ bool save_write(const char *path, const struct save *s)
         .checksum = checksum(s, sizeof(*s)),
     };
 
+    char temp[TEMP_PATH_MAX];
+
     memcpy(header.magic, magic, sizeof(magic));
     make_folders(path);
-    FILE *f = fopen(path, "wb");
+
+    // The old file stays intact until the new one is complete, so losing power
+    // while saving can't lose the stats.
+    temp_path(path, temp);
+    FILE *f = fopen(temp, "wb");
     if (!f)
         return false;
 
     bool ok = fwrite(&header, sizeof(header), 1, f) == 1 && fwrite(s, sizeof(*s), 1, f) == 1;
-    return fclose(f) == 0 && ok;
+    if (fclose(f) != 0 || !ok)
+        return false;
+
+    // FAT can't rename over a file that exists.
+    if (rename(temp, path) == 0)
+        return true;
+    remove(path);
+    return rename(temp, path) == 0;
 }
 
 void save_load(const char *path)
