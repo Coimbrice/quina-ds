@@ -97,6 +97,9 @@ Depois:
     make        # gera o quina.nds
     make test   # roda os testes da lógica do jogo no PC
 
+Para mexer no código, `make format`, `make lint` e `make memcheck` rodam
+clang-format, cppcheck, ruff e os testes com os sanitizers ligados.
+
 ### Listas de palavras
 
 `data/answers.txt` tem as palavras que podem ser resposta e `data/allowed.txt`

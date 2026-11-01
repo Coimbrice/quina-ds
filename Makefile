@@ -35,7 +35,9 @@ build/licenses.c: tools/licenses.py $(LICENSE_FILES)
 # The version comes from this file.
 $(BUILDDIR)/source/menu.c.o: Makefile
 
-.PHONY: test
+.PHONY: test memcheck format lint
+
+C_FILES		:= $(filter-out source/font_data.c,$(wildcard source/*.c source/*.h tests/*.c))
 
 test: build/words.c
 	$(V)$(HOSTCC) $(HOSTCFLAGS) -o build/test_game tests/test_game.c source/game.c
@@ -46,3 +48,19 @@ test: build/words.c
 	$(V)build/test_words
 	$(V)build/test_daily
 	$(V)build/test_save
+
+# Runs the tests with the memory and undefined behavior checkers on.
+memcheck: HOSTCFLAGS += -g -fsanitize=address,undefined -fno-sanitize-recover=all
+memcheck: test
+
+format:
+	clang-format -i $(C_FILES)
+	ruff format tools
+
+lint:
+	clang-format --dry-run -Werror $(C_FILES)
+	cppcheck --enable=warning,performance,portability --std=c11 --quiet --error-exitcode=1 \
+		--suppress=missingIncludeSystem --suppress='*:source/font_data.c' -Isource \
+		'-DALIGN(n)=' '-DGAME_VERSION="$(VERSION)"' source tests
+	ruff check tools
+	ruff format --check tools

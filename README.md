@@ -96,6 +96,9 @@ Then:
     make        # builds quina.nds
     make test   # runs the game logic tests on the PC
 
+To work on the code, `make format`, `make lint` and `make memcheck` run
+clang-format, cppcheck, ruff and the tests with the sanitizers on.
+
 ### Word lists
 
 `data/answers.txt` has the words that can be answers and `data/allowed.txt`
