@@ -5,8 +5,7 @@
 A word guessing game for the Nintendo DS. Guess the five-letter Portuguese
 word, or play two or four words at once.
 
-Inspirado em Termo (term.ooo), de Fernando Serboncini. Lista de palavras usada
-com permissão do autor.
+Inspirado em Termo (term.ooo), de Fernando Serboncini.
 
 Quina is an unofficial homebrew project and is not affiliated with or endorsed
 by Nintendo. Nintendo DS is a trademark of Nintendo.
@@ -104,6 +103,11 @@ the other words accepted as guesses, one per line in UTF-8, with accents. The
 build turns them into compact tables, and stops with the file and line of any
 word that isn't five letters.
 
+The lists are built by `tools/build_wordlists.py` from the lexicon, conjugations
+and word frequencies in [fserb/pt-br](https://github.com/fserb/pt-br). Answers are
+the most common lexicon words, minus plurals, offensive words and the ones in
+`tools/answer_exclusions.txt`, which were reviewed by hand.
+
 The order of the daily challenges comes from the answer list, so changing it
 changes which word falls on each day.
 
@@ -135,6 +139,6 @@ Demak, licensed under the SIL Open Font License (see `OFL.txt`).
 
 ## License
 
-The code is under the MIT License (see `LICENSE`). The word lists in `data/`
-are not: they belong to Fernando Serboncini and are used with his permission.
-The Mitr font is under the SIL Open Font License (see `OFL.txt`).
+The code is under the MIT License (see `LICENSE`). The word lists in `data/` are
+derived from [fserb/pt-br](https://github.com/fserb/pt-br) by Fernando
+Serboncini, also under the MIT License (see `data/LICENSE`). The Mitr font is under the SIL Open Font License (see `OFL.txt`).

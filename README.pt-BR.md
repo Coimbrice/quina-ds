@@ -5,8 +5,7 @@
 Um jogo de adivinhar palavras para Nintendo DS. Descubra a palavra de cinco
 letras, ou jogue com duas ou quatro palavras ao mesmo tempo.
 
-Inspirado em Termo (term.ooo), de Fernando Serboncini. Lista de palavras usada
-com permissão do autor.
+Inspirado em Termo (term.ooo), de Fernando Serboncini.
 
 Quina é um projeto homebrew não oficial, sem afiliação com a Nintendo e sem
 aprovação dela. Nintendo DS é uma marca registrada da Nintendo.
@@ -105,6 +104,12 @@ as outras palavras aceitas como chute, uma por linha em UTF-8, com acentos. O
 build transforma as listas em tabelas compactas e para, indicando arquivo e
 linha, se alguma palavra não tiver cinco letras.
 
+As listas são geradas por `tools/build_wordlists.py` a partir do léxico, das
+conjugações e das frequências de uso em
+[fserb/pt-br](https://github.com/fserb/pt-br). As respostas são as palavras mais
+comuns do léxico, menos plurais, palavras ofensivas e as que estão em
+`tools/answer_exclusions.txt`, revisadas à mão.
+
 A ordem dos desafios diários vem da lista de respostas, então mudar a lista
 muda a palavra de cada dia.
 
@@ -138,5 +143,5 @@ Demak, sob a SIL Open Font License (veja `OFL.txt`).
 ## Licença
 
 O código está sob a licença MIT (veja `LICENSE`). As listas de palavras em
-`data/` não: elas pertencem a Fernando Serboncini e são usadas com permissão
-dele. A fonte Mitr está sob a SIL Open Font License (veja `OFL.txt`).
+`data/` derivam de [fserb/pt-br](https://github.com/fserb/pt-br), de Fernando
+Serboncini, também sob a licença MIT (veja `data/LICENSE`). A fonte Mitr está sob a SIL Open Font License (veja `OFL.txt`).
