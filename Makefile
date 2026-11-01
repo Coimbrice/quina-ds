@@ -2,12 +2,14 @@ BLOCKSDS	?= /opt/blocksds/core
 
 NAME		:= quina
 GAME_TITLE	:= Quina
-GAME_SUBTITLE	:= Jogo de palavras
+VERSION		:= 0.2
+GAME_SUBTITLE	:= Jogo de palavras v$(VERSION)
 GAME_AUTHOR	:= Coimbrice
 GAME_ICON	:= icon.png
 
 INCLUDEDIRS	:= source
 SOURCES_C	:= build/words.c build/licenses.c
+DEFINES		:= -DGAME_VERSION=\"$(VERSION)\"
 AUDIODIRS	:= audio
 
 LIBS		:= -lmm9 -lnds9
@@ -29,6 +31,9 @@ build/licenses.c: tools/licenses.py $(LICENSE_FILES)
 	@echo "  LICENSE $@"
 	@$(MKDIR) -p $(@D)
 	$(V)python3 tools/licenses.py $@ $(LICENSE_FILES)
+
+# The version comes from this file.
+$(BUILDDIR)/source/menu.c.o: Makefile
 
 .PHONY: test
 

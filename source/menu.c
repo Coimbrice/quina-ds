@@ -48,7 +48,7 @@ enum page {
 };
 
 static const char *const credits[] = {
-    "Quina, por Coimbrice",
+    "Quina v" GAME_VERSION ", por Coimbrice",
     "",
     "Inspirado em Termo (term.ooo),",
     "de Fernando Serboncini.",
