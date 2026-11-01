@@ -3,14 +3,13 @@
 #include "daily.h"
 #include "words.h"
 
-// 2026-01-01, in days since 1970-01-01.
-#define FIRST_DAY 20454
 #define ANSWERS_PER_DAY 7
 
+// Days since 1970, so every date a console clock can show is a different day,
+// even when it's set wrong.
 int daily_day(time_t now)
 {
-    int day = now / 86400 - FIRST_DAY;
-    return day < 0 ? 0 : day;
+    return now / 86400;
 }
 
 void daily_answers(int day, int num_boards, char answers[][WORD_LEN])

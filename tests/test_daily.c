@@ -17,10 +17,14 @@ static int failures;
 static void test_day(void)
 {
     CHECK(daily_day(0) == 0);
-    CHECK(daily_day(20454L * 86400) == 0);
-    CHECK(daily_day(20454L * 86400 + 86399) == 0);
-    CHECK(daily_day(20455L * 86400) == 1);
-    CHECK(daily_day(20819L * 86400) == 365);
+    CHECK(daily_day(86399) == 0);
+    CHECK(daily_day(86400) == 1);
+
+    // A console with a wrong clock still gets a new challenge every day:
+    // 2000-01-01 and 2011-01-11 are valid dates like any other.
+    CHECK(daily_day(10957L * 86400) == 10957);
+    CHECK(daily_day(14985L * 86400) == 14985);
+    CHECK(daily_day(14986L * 86400) == 14986);
 }
 
 // All the answers of a day, in mode order.
@@ -37,7 +41,7 @@ static void test_answers(void)
     char b[7][WORD_LEN];
 
     // No word repeats across modes on the same day.
-    for (int day = 0; day < 1000; day++) {
+    for (int day = 10957; day < 11957; day++) {
         day_answers(day, a);
         for (int i = 0; i < 7; i++) {
             for (int j = i + 1; j < 7; j++)
@@ -46,8 +50,8 @@ static void test_answers(void)
     }
 
     // Consecutive days don't share words while the list lasts.
-    day_answers(0, a);
-    day_answers(1, b);
+    day_answers(14985, a);
+    day_answers(14986, b);
     for (int i = 0; i < 7; i++) {
         for (int j = 0; j < 7; j++)
             CHECK(memcmp(a[i], b[j], WORD_LEN) != 0);
