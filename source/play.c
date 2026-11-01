@@ -506,11 +506,18 @@ static void answers_text(char *out)
     *out = 0;
 }
 
+static bool daily_expired(void)
+{
+    return daily && saved->day != daily_day(time(NULL));
+}
+
 static void countdown_text(char *out, size_t size)
 {
     int left = 86400 - time(NULL) % 86400;
 
-    if (left >= 3600) {
+    if (daily_expired()) {
+        snprintf(out, size, "A: desafio de hoje");
+    } else if (left >= 3600) {
         int hours = left / 3600;
         snprintf(out, size, "Novo desafio em %d hora%s", hours, hours == 1 ? "" : "s");
     } else {
@@ -613,11 +620,6 @@ bool play_update(void)
     if (daily && !menu_open) {
         char text[sizeof(countdown)];
 
-        // At midnight a finished daily gives way to the new one.
-        if (saved->day != daily_day(time(NULL)) && game_over(&cur->game)) {
-            switch_mode(mode);
-            return false;
-        }
         countdown_text(text, sizeof(text));
         dirty |= game_over(&cur->game) && strcmp(text, countdown) != 0;
     }
@@ -665,10 +667,15 @@ bool play_update(void)
         stats_timer = 0;
         show_view(next);
     } else if (game_over(&cur->game)) {
+        // A finished daily stays on screen until the player moves on, even if
+        // the day changed in the meantime.
         if (!daily && (down & (KEY_A | KEY_TOUCH))) {
             sound_play(SOUND_OPEN);
             restart();
             dirty = true;
+        } else if (daily_expired() && (down & (KEY_A | KEY_TOUCH))) {
+            sound_play(SOUND_OPEN);
+            change_mode(mode);
         }
     } else if (down & KEY_TOUCH) {
         handle_touch(touch.px, touch.py);
