@@ -14,9 +14,15 @@
 
 #define SAVE_PATH "/data/quina/save.dat"
 
+// The license notices that ship in the ROM. See tools/licenses.py.
+extern const char licenses[];
+
 int main(void)
 {
     bool playing = false;
+
+    // Nothing reads the notices, so the linker would drop them without this.
+    __asm__ volatile("" : : "r"(licenses));
 
     gfx_init();
     keyboard_init();
