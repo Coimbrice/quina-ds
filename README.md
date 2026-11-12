@@ -144,5 +144,6 @@ Demak, licensed under the SIL Open Font License (see `OFL.txt`).
 
 The code is under the MIT License (see `LICENSE`). The word lists in `data/` are
 derived from [fserb/pt-br](https://github.com/fserb/pt-br) by Fernando
-Serboncini, also under the MIT License (see `data/LICENSE`). The Mitr font is under the SIL Open Font License (see `OFL.txt`). The notices for
-everything else are in `THIRD_PARTY.txt`, and all of them ship inside the ROM.
+Serboncini, also under the MIT License (see `data/LICENSE`). The Mitr font is
+under the SIL Open Font License (see `OFL.txt`). The notices for everything else
+are in `THIRD_PARTY.txt`, and all of them ship inside the ROM.
