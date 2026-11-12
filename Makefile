@@ -3,7 +3,7 @@ BLOCKSDS	?= /opt/blocksds/core
 NAME		:= quina
 GAME_TITLE	:= Quina
 VERSION		:= 0.2
-GAME_SUBTITLE	:= Jogo de palavras v$(VERSION)
+GAME_SUBTITLE	:= Jogo de palavras
 GAME_AUTHOR	:= Coimbrice
 GAME_ICON	:= icon.png
 
