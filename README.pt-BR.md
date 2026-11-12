@@ -7,10 +7,10 @@ letras, ou jogue com duas ou quatro palavras ao mesmo tempo.
 
 Gosto da comunidade homebrew e da ideia de ser dono de verdade dos próprios
 aparelhos. Entre os jogos homebrew de DS, encontrei um port de Wordle, e isso me
-deu vontade de levar o Termo, o Wordle brasileiro, para o DS também, como uma
-contribuição para a comunidade brasileira de homebrew de DS.
+deu vontade de levar o [Termo](https://term.ooo), o Wordle brasileiro, para o DS
+também, como uma contribuição para a comunidade brasileira de homebrew de DS.
 
-Inspirado em Termo (term.ooo), de Fernando Serboncini.
+Inspirado em [Termo (term.ooo)](https://term.ooo), de Fernando Serboncini.
 
 Quina é um projeto homebrew não oficial, sem afiliação com a Nintendo e sem
 aprovação dela. Nintendo DS é uma marca registrada da Nintendo.

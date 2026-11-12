@@ -7,10 +7,10 @@ word, or play two or four words at once.
 
 I like the homebrew community and the idea of really owning the devices you buy.
 Among the DS homebrew games I found a port of Wordle, and it made me want to
-bring Termo, the Brazilian Wordle, to the DS too, as something for the Brazilian
-DS homebrew community.
+bring [Termo](https://term.ooo), the Brazilian Wordle, to the DS too, as
+something for the Brazilian DS homebrew community.
 
-Inspirado em Termo (term.ooo), de Fernando Serboncini.
+Inspirado em [Termo (term.ooo)](https://term.ooo), de Fernando Serboncini.
 
 Quina is an unofficial homebrew project and is not affiliated with or endorsed
 by Nintendo. Nintendo DS is a trademark of Nintendo.
